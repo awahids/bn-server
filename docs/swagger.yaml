@@ -1,0 +1,751 @@
+basePath: /api/v1
+definitions:
+  bn-mobile_server_internal_delivery_data_request_appReq.CreateBookmarkRequest:
+    properties:
+      contentId:
+        type: string
+      note:
+        type: string
+      type:
+        type: string
+    type: object
+  bn-mobile_server_internal_delivery_data_request_appReq.CreateQuizAttemptRequest:
+    properties:
+      answers:
+        items:
+          $ref: '#/definitions/bn-mobile_server_internal_delivery_data_request_appReq.QuizAnswerRequest'
+        type: array
+      category:
+        type: string
+      score:
+        type: integer
+      timeSpent:
+        type: integer
+      totalQuestions:
+        type: integer
+    type: object
+  bn-mobile_server_internal_delivery_data_request_appReq.QuizAnswerRequest:
+    properties:
+      correctAnswer:
+        type: string
+      isCorrect:
+        type: boolean
+      questionId:
+        type: string
+      timeSpent:
+        type: integer
+      userAnswer:
+        type: string
+    type: object
+  bn-mobile_server_internal_delivery_data_request_appReq.UpdateUserRequest:
+    properties:
+      dailyProgress:
+        type: integer
+      name:
+        type: string
+      preferences:
+        additionalProperties: {}
+        type: object
+      streak:
+        type: integer
+      username:
+        type: string
+    type: object
+  bn-mobile_server_internal_delivery_data_request_appReq.UpsertDhikrCounterRequest:
+    properties:
+      completed:
+        type: boolean
+      count:
+        type: integer
+      date:
+        type: string
+      dhikrId:
+        type: string
+      session:
+        type: string
+      target:
+        type: integer
+    type: object
+  bn-mobile_server_internal_delivery_data_request_appReq.UpsertProgressRequest:
+    properties:
+      completed:
+        type: boolean
+      itemId:
+        type: string
+      module:
+        type: string
+      progress:
+        type: integer
+      score:
+        type: integer
+      timeSpent:
+        type: integer
+    type: object
+  bn-mobile_server_internal_delivery_data_request_authReq.GoogleLoginRequest:
+    properties:
+      idToken:
+        type: string
+    required:
+    - idToken
+    type: object
+  bn-mobile_server_internal_delivery_data_response.APIResponse:
+    properties:
+      data: {}
+      error: {}
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
+info:
+  contact: {}
+  description: API backend Belajar Ngaji (Go + Gin).
+  title: BN Mobile API
+  version: "1.0"
+paths:
+  /audio-proxy:
+    get:
+      description: Proxy local/allowed audio URL for client playback.
+      parameters:
+      - description: Audio source URL or local path
+        in: query
+        name: url
+        required: true
+        type: string
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+      summary: Audio proxy
+      tags:
+      - Public
+  /auth/google:
+    post:
+      consumes:
+      - application/json
+      description: Validate Google ID token and return access token with refresh-token
+        cookie.
+      parameters:
+      - description: Google login payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/bn-mobile_server_internal_delivery_data_request_authReq.GoogleLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+      summary: Login with Google ID token
+      tags:
+      - Auth
+  /auth/logout:
+    post:
+      consumes:
+      - application/json
+      description: Revoke refresh token and clear refresh-token cookie.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+      summary: Logout current session
+      tags:
+      - Auth
+  /auth/me:
+    get:
+      description: Return current user profile from Bearer token.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Get current authenticated user
+      tags:
+      - Auth
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Issue a new access token and rotate refresh-token cookie.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+      summary: Refresh access token
+      tags:
+      - Auth
+  /bookmarks:
+    get:
+      description: Get authenticated user bookmarks, optionally filtered by type.
+      parameters:
+      - description: Bookmark type (quran|dhikr)
+        in: query
+        name: type
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Get bookmarks
+      tags:
+      - Bookmark
+    post:
+      consumes:
+      - application/json
+      description: Create bookmark for authenticated user.
+      parameters:
+      - description: Create bookmark payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/bn-mobile_server_internal_delivery_data_request_appReq.CreateBookmarkRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Create bookmark
+      tags:
+      - Bookmark
+  /bookmarks/{id}:
+    delete:
+      description: Delete bookmark by id for authenticated user.
+      parameters:
+      - description: Bookmark ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete bookmark
+      tags:
+      - Bookmark
+  /dhikr/counters:
+    get:
+      description: Get dhikr counters for authenticated user by date.
+      parameters:
+      - description: Date in YYYY-MM-DD
+        in: query
+        name: date
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Get dhikr counters
+      tags:
+      - Dhikr
+    post:
+      consumes:
+      - application/json
+      description: Upsert dhikr counter entry for authenticated user.
+      parameters:
+      - description: Upsert dhikr counter payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/bn-mobile_server_internal_delivery_data_request_appReq.UpsertDhikrCounterRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Create or update dhikr counter
+      tags:
+      - Dhikr
+  /health:
+    get:
+      description: Check server status.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Health check
+      tags:
+      - Health
+  /prayer-times:
+    get:
+      description: Get prayer times by coordinates and optional date/method.
+      parameters:
+      - description: Latitude
+        in: query
+        name: lat
+        required: true
+        type: number
+      - description: Longitude
+        in: query
+        name: lng
+        required: true
+        type: number
+      - description: Date in YYYY-MM-DD (default today)
+        in: query
+        name: date
+        type: string
+      - description: Calculation method (default 2)
+        in: query
+        name: method
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+      summary: Get prayer times
+      tags:
+      - Public
+  /progress:
+    get:
+      description: Get authenticated user progress, optionally filtered by module.
+      parameters:
+      - description: Filter by module (hijaiyah|quran|dhikr|quiz)
+        in: query
+        name: module
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Get user progress
+      tags:
+      - Progress
+    post:
+      consumes:
+      - application/json
+      description: Upsert user progress item by module and item id.
+      parameters:
+      - description: Upsert progress payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/bn-mobile_server_internal_delivery_data_request_appReq.UpsertProgressRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Create or update progress
+      tags:
+      - Progress
+  /progress/{module}/{itemId}:
+    get:
+      description: Get progress item for a specific module and item id.
+      parameters:
+      - description: Module name
+        in: path
+        name: module
+        required: true
+        type: string
+      - description: Item id
+        in: path
+        name: itemId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Get progress item
+      tags:
+      - Progress
+  /quiz/attempts:
+    get:
+      description: Get quiz attempts for authenticated user, optionally filtered by
+        category.
+      parameters:
+      - description: Quiz category
+        in: query
+        name: category
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Get quiz attempts
+      tags:
+      - Quiz
+    post:
+      consumes:
+      - application/json
+      description: Save a completed quiz attempt for authenticated user.
+      parameters:
+      - description: Create quiz attempt payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/bn-mobile_server_internal_delivery_data_request_appReq.CreateQuizAttemptRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Create quiz attempt
+      tags:
+      - Quiz
+  /quiz/stats:
+    get:
+      description: Get overall quiz stats or stats by category for authenticated user.
+      parameters:
+      - description: Quiz category
+        in: query
+        name: category
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Get quiz stats
+      tags:
+      - Quiz
+  /user:
+    get:
+      description: Return authenticated user profile and related app data.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Get user profile
+      tags:
+      - User
+    patch:
+      consumes:
+      - application/json
+      description: Update authenticated user profile fields.
+      parameters:
+      - description: Update user payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/bn-mobile_server_internal_delivery_data_request_appReq.UpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Update user profile
+      tags:
+      - User
+schemes:
+- http
+- https
+securityDefinitions:
+  BearerAuth:
+    description: 'Bearer access token. Format: "Bearer {token}"'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

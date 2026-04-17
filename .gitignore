@@ -1,0 +1,6 @@
+.env
+main
+*.out
+*.test
+.coverprofile
+/tmp
