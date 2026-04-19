@@ -18,10 +18,12 @@ import (
 )
 
 var (
-	ErrInvalidGoogleToken  = errors.New("invalid google token")
-	ErrEmailNotVerified    = errors.New("google email is not verified")
-	ErrInvalidRefreshToken = errors.New("invalid refresh token")
-	ErrUserNotFound        = errors.New("user not found")
+	ErrInvalidGoogleToken       = errors.New("invalid google token")
+	ErrInvalidGoogleOAuthCode   = errors.New("invalid google oauth code")
+	ErrGoogleOAuthNotConfigured = errors.New("google oauth is not configured")
+	ErrEmailNotVerified         = errors.New("google email is not verified")
+	ErrInvalidRefreshToken      = errors.New("invalid refresh token")
+	ErrUserNotFound             = errors.New("user not found")
 )
 
 type authService struct {
@@ -46,6 +48,34 @@ func (s *authService) LoginWithGoogle(ctx context.Context, idTokenRaw string) (*
 		return nil, nil, ErrInvalidGoogleToken
 	}
 
+	return s.loginWithGoogleTokenInfo(ctx, tokenInfo)
+}
+
+func (s *authService) LoginWithGoogleOAuthCode(
+	ctx context.Context,
+	code, redirectURI string,
+) (*models.User, *serviceinterface.TokenPair, error) {
+	if strings.TrimSpace(code) == "" {
+		return nil, nil, ErrInvalidGoogleOAuthCode
+	}
+
+	idToken, err := s.exchangeGoogleOAuthCode(ctx, code, redirectURI)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	tokenInfo, err := s.validateGoogleIDToken(ctx, idToken)
+	if err != nil {
+		return nil, nil, ErrInvalidGoogleToken
+	}
+
+	return s.loginWithGoogleTokenInfo(ctx, tokenInfo)
+}
+
+func (s *authService) loginWithGoogleTokenInfo(
+	ctx context.Context,
+	tokenInfo *googleTokenInfoResponse,
+) (*models.User, *serviceinterface.TokenPair, error) {
 	email := strings.ToLower(tokenInfo.Email)
 	if email == "" {
 		return nil, nil, ErrInvalidGoogleToken
@@ -241,6 +271,91 @@ type googleTokenInfoResponse struct {
 	Name          string `json:"name"`
 	Picture       string `json:"picture"`
 	ExpiresIn     string `json:"expires_in"`
+}
+
+type googleTokenExchangeResponse struct {
+	AccessToken      string `json:"access_token"`
+	ExpiresIn        int64  `json:"expires_in"`
+	IDToken          string `json:"id_token"`
+	RefreshToken     string `json:"refresh_token"`
+	Scope            string `json:"scope"`
+	TokenType        string `json:"token_type"`
+	Error            string `json:"error"`
+	ErrorDescription string `json:"error_description"`
+}
+
+func (s *authService) exchangeGoogleOAuthCode(
+	ctx context.Context,
+	code, redirectURI string,
+) (string, error) {
+	clientID := strings.TrimSpace(s.cfg.Google.ClientID)
+	clientSecret := strings.TrimSpace(s.cfg.Google.ClientSecret)
+	redirectURI = strings.TrimSpace(redirectURI)
+
+	if clientID == "" || clientSecret == "" {
+		return "", ErrGoogleOAuthNotConfigured
+	}
+	if strings.TrimSpace(code) == "" || redirectURI == "" {
+		return "", ErrInvalidGoogleOAuthCode
+	}
+	if redirectURI != "postmessage" {
+		parsed, err := url.ParseRequestURI(redirectURI)
+		if err != nil || (parsed.Scheme != "https" && parsed.Scheme != "http") {
+			return "", ErrInvalidGoogleOAuthCode
+		}
+	}
+
+	form := url.Values{}
+	form.Set("code", code)
+	form.Set("client_id", clientID)
+	form.Set("client_secret", clientSecret)
+	form.Set("grant_type", "authorization_code")
+	form.Set("redirect_uri", redirectURI)
+
+	req, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodPost,
+		"https://oauth2.googleapis.com/token",
+		strings.NewReader(form.Encode()),
+	)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer res.Body.Close()
+
+	var payload googleTokenExchangeResponse
+	if err := json.NewDecoder(res.Body).Decode(&payload); err != nil {
+		return "", err
+	}
+
+	if res.StatusCode != http.StatusOK {
+		if payload.Error == "invalid_grant" || payload.Error == "invalid_request" {
+			if payload.ErrorDescription != "" {
+				return "", fmt.Errorf("%w: %s", ErrInvalidGoogleOAuthCode, payload.ErrorDescription)
+			}
+			return "", ErrInvalidGoogleOAuthCode
+		}
+		if payload.ErrorDescription != "" {
+			return "", fmt.Errorf("google token exchange failed: %s", payload.ErrorDescription)
+		}
+		if payload.Error != "" {
+			return "", fmt.Errorf("google token exchange failed: %s", payload.Error)
+		}
+		return "", fmt.Errorf("google token exchange failed with status %d", res.StatusCode)
+	}
+
+	idToken := strings.TrimSpace(payload.IDToken)
+	if idToken == "" {
+		return "", errors.New("google token exchange response missing id_token")
+	}
+
+	return idToken, nil
 }
 
 func (s *authService) validateGoogleIDToken(ctx context.Context, rawIDToken string) (*googleTokenInfoResponse, error) {

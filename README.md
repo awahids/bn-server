@@ -35,6 +35,7 @@ server/
 
 - `GET /health`
 - `POST /api/v1/auth/google`
+- `POST /api/v1/auth/google/oauth`
 - `POST /api/v1/auth/refresh`
 - `POST /api/v1/auth/logout`
 - `GET /api/v1/auth/me` (Bearer token required)
@@ -94,6 +95,18 @@ Content-Type: application/json
 
 {
   "idToken": "<google-id-token-from-frontend>"
+}
+```
+
+### Login with Google OAuth Code
+
+```http
+POST /api/v1/auth/google/oauth
+Content-Type: application/json
+
+{
+  "code": "<google-oauth-authorization-code>",
+  "redirectUri": "http://localhost:3000/auth/callback"
 }
 ```
 

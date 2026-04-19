@@ -88,6 +88,16 @@ definitions:
     required:
     - idToken
     type: object
+  bn-mobile_server_internal_delivery_data_request_authReq.GoogleOAuthCodeLoginRequest:
+    properties:
+      code:
+        type: string
+      redirectUri:
+        type: string
+    required:
+    - code
+    - redirectUri
+    type: object
   bn-mobile_server_internal_delivery_data_response.APIResponse:
     properties:
       data: {}
@@ -171,6 +181,45 @@ paths:
           schema:
             $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
       summary: Login with Google ID token
+      tags:
+      - Auth
+  /auth/google/oauth:
+    post:
+      consumes:
+      - application/json
+      description: Exchange OAuth code with Google and return access token with refresh-token
+        cookie.
+      parameters:
+      - description: Google OAuth code payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/bn-mobile_server_internal_delivery_data_request_authReq.GoogleOAuthCodeLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse'
+      summary: Login with Google OAuth authorization code
       tags:
       - Auth
   /auth/logout:

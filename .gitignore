@@ -4,3 +4,4 @@ main
 *.test
 .coverprofile
 /tmp
+.gopath

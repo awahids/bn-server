@@ -15,6 +15,7 @@ type TokenPair struct {
 
 type AuthService interface {
 	LoginWithGoogle(ctx context.Context, idToken string) (*models.User, *TokenPair, error)
+	LoginWithGoogleOAuthCode(ctx context.Context, code, redirectURI string) (*models.User, *TokenPair, error)
 	RefreshToken(ctx context.Context, refreshToken string) (*TokenPair, error)
 	Logout(ctx context.Context, refreshToken string) error
 	GetCurrentUser(ctx context.Context, userID string) (*models.User, error)

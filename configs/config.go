@@ -47,7 +47,8 @@ type JWTConfig struct {
 }
 
 type GoogleConfig struct {
-	ClientID string
+	ClientID     string
+	ClientSecret string
 }
 
 type CORSConfig struct {
@@ -99,7 +100,8 @@ func LoadConfig() (*Config, error) {
 			RefreshTokenTTL: getEnvDuration("JWT_REFRESH_TOKEN_TTL", 7*24*time.Hour),
 		},
 		Google: GoogleConfig{
-			ClientID: getEnv("GOOGLE_CLIENT_ID", ""),
+			ClientID:     getEnv("GOOGLE_CLIENT_ID", ""),
+			ClientSecret: getEnv("GOOGLE_CLIENT_SECRET", ""),
 		},
 		CORS: CORSConfig{
 			AllowOrigins: parseCommaSeparated(getEnv("CORS_ALLOW_ORIGINS", "http://localhost:3000")),
@@ -127,6 +129,9 @@ func LoadConfig() (*Config, error) {
 
 	if cfg.AppEnv == "production" && cfg.Google.ClientID == "" {
 		return nil, fmt.Errorf("GOOGLE_CLIENT_ID is required in production")
+	}
+	if cfg.AppEnv == "production" && cfg.Google.ClientSecret == "" {
+		return nil, fmt.Errorf("GOOGLE_CLIENT_SECRET is required in production")
 	}
 
 	return cfg, nil

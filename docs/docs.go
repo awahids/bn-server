@@ -120,6 +120,64 @@ const docTemplate = `{
                 }
             }
         },
+        "/auth/google/oauth": {
+            "post": {
+                "description": "Exchange OAuth code with Google and return access token with refresh-token cookie.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Login with Google OAuth authorization code",
+                "parameters": [
+                    {
+                        "description": "Google OAuth code payload",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/bn-mobile_server_internal_delivery_data_request_authReq.GoogleOAuthCodeLoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/bn-mobile_server_internal_delivery_data_response.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/logout": {
             "post": {
                 "description": "Revoke refresh token and clear refresh-token cookie.",
@@ -1138,6 +1196,21 @@ const docTemplate = `{
             ],
             "properties": {
                 "idToken": {
+                    "type": "string"
+                }
+            }
+        },
+        "bn-mobile_server_internal_delivery_data_request_authReq.GoogleOAuthCodeLoginRequest": {
+            "type": "object",
+            "required": [
+                "code",
+                "redirectUri"
+            ],
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "redirectUri": {
                     "type": "string"
                 }
             }

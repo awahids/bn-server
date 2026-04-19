@@ -9,6 +9,7 @@ import (
 	"bn-mobile/server/internal/domain/repositories/repoInterface"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type appRepository struct {
@@ -82,25 +83,29 @@ func (r *appRepository) GetProgressByItem(ctx context.Context, userID, module, i
 }
 
 func (r *appRepository) UpsertProgress(ctx context.Context, progress *models.UserProgress) (*models.UserProgress, error) {
-	existing, err := r.GetProgressByItem(ctx, progress.UserID, progress.Module, progress.ItemID)
-	if err != nil {
-		return nil, err
-	}
-
-	if existing != nil {
-		existing.Progress = progress.Progress
-		existing.Completed = progress.Completed
-		existing.Score = progress.Score
-		existing.TimeSpent = progress.TimeSpent
-		existing.LastAccessed = time.Now()
-		if err := r.db.WithContext(ctx).Save(existing).Error; err != nil {
-			return nil, err
-		}
-		return existing, nil
-	}
-
 	progress.LastAccessed = time.Now()
-	if err := r.db.WithContext(ctx).Create(progress).Error; err != nil {
+	if err := r.db.WithContext(ctx).
+		Clauses(
+			clause.OnConflict{
+				Columns: []clause.Column{
+					{Name: "user_id"},
+					{Name: "module"},
+					{Name: "item_id"},
+				},
+				DoUpdates: clause.Assignments(map[string]any{
+					"progress":      progress.Progress,
+					"completed":     progress.Completed,
+					"score":         progress.Score,
+					"time_spent":    progress.TimeSpent,
+					"last_accessed": progress.LastAccessed,
+					"updated_at":    time.Now(),
+					// Ensure soft-deleted rows can be revived by upsert.
+					"deleted_at": nil,
+				}),
+			},
+			clause.Returning{},
+		).
+		Create(progress).Error; err != nil {
 		return nil, err
 	}
 	return progress, nil

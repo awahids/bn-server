@@ -32,6 +32,10 @@ type UserProgress struct {
 	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
+func (UserProgress) TableName() string {
+	return "user_progress"
+}
+
 func (u *UserProgress) BeforeCreate(_ *gorm.DB) error {
 	if u.ID == "" {
 		u.ID = uuid.NewString()

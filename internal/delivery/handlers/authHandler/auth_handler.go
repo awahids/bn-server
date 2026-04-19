@@ -66,6 +66,39 @@ func (h *AuthHandler) GoogleLogin(c *gin.Context) {
 	response.Success(c, http.StatusOK, "login success", toAuthResponse(user, tokens))
 }
 
+// GoogleOAuthLogin godoc
+// @Summary Login with Google OAuth authorization code
+// @Description Exchange OAuth code with Google and return access token with refresh-token cookie.
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param payload body authreq.GoogleOAuthCodeLoginRequest true "Google OAuth code payload"
+// @Success 200 {object} response.APIResponse
+// @Failure 400 {object} response.APIResponse
+// @Failure 401 {object} response.APIResponse
+// @Failure 403 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /auth/google/oauth [post]
+func (h *AuthHandler) GoogleOAuthLogin(c *gin.Context) {
+	var req authreq.GoogleOAuthCodeLoginRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Failed(c, http.StatusBadRequest, "invalid request payload", err.Error())
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
+	user, tokens, err := h.authService.LoginWithGoogleOAuthCode(ctx, req.Code, req.RedirectURI)
+	if err != nil {
+		h.handleAuthError(c, err)
+		return
+	}
+
+	h.setRefreshTokenCookie(c, tokens.RefreshToken)
+	response.Success(c, http.StatusOK, "login success", toAuthResponse(user, tokens))
+}
+
 // RefreshToken godoc
 // @Summary Refresh access token
 // @Description Issue a new access token and rotate refresh-token cookie.
@@ -179,6 +212,10 @@ func (h *AuthHandler) handleAuthError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, authservice.ErrInvalidGoogleToken):
 		response.Failed(c, http.StatusUnauthorized, "google token invalid", err.Error())
+	case errors.Is(err, authservice.ErrInvalidGoogleOAuthCode):
+		response.Failed(c, http.StatusUnauthorized, "google oauth code invalid", err.Error())
+	case errors.Is(err, authservice.ErrGoogleOAuthNotConfigured):
+		response.Failed(c, http.StatusInternalServerError, "google oauth is not configured", err.Error())
 	case errors.Is(err, authservice.ErrEmailNotVerified):
 		response.Failed(c, http.StatusForbidden, "google email not verified", err.Error())
 	default:

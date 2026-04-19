@@ -21,6 +21,7 @@ func RegisterAuthRoutes(
 	auth := group.Group("/auth")
 	{
 		auth.POST("/google", rateLimiters.Google, handler.GoogleLogin)
+		auth.POST("/google/oauth", rateLimiters.Google, handler.GoogleOAuthLogin)
 		auth.POST("/refresh", rateLimiters.Refresh, handler.RefreshToken)
 		auth.POST("/logout", rateLimiters.Logout, handler.Logout)
 		auth.GET("/me", authMiddleware, handler.Me)
