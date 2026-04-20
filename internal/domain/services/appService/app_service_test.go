@@ -56,6 +56,10 @@ func (m *mockAppRepo) DeleteBookmark(context.Context, string) error {
 	return nil
 }
 
+func (m *mockAppRepo) GetDhikrs(context.Context) ([]models.Dhikr, error) {
+	return nil, nil
+}
+
 func (m *mockAppRepo) GetDhikrCountersForDate(context.Context, string, string) ([]models.DhikrCounter, error) {
 	return nil, nil
 }
