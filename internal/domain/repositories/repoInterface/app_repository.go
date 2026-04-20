@@ -20,6 +20,7 @@ type AppRepository interface {
 	FindBookmarkByID(ctx context.Context, bookmarkID string) (*models.Bookmark, error)
 	DeleteBookmark(ctx context.Context, bookmarkID string) error
 
+	GetDhikrs(ctx context.Context) ([]models.Dhikr, error)
 	GetDhikrCountersForDate(ctx context.Context, userID, date string) ([]models.DhikrCounter, error)
 	GetDhikrCounter(ctx context.Context, userID, dhikrID, date, session string) (*models.DhikrCounter, error)
 	UpsertDhikrCounter(ctx context.Context, counter *models.DhikrCounter) (*models.DhikrCounter, error)

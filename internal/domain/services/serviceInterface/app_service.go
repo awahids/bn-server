@@ -119,6 +119,7 @@ type AppService interface {
 	CreateBookmark(ctx context.Context, userID string, input CreateBookmarkInput) (*models.Bookmark, error)
 	DeleteBookmark(ctx context.Context, userID, bookmarkID string) error
 
+	GetDhikrs(ctx context.Context) ([]models.Dhikr, error)
 	GetDhikrCounters(ctx context.Context, userID, date string) ([]models.DhikrCounter, error)
 	UpsertDhikrCounter(ctx context.Context, userID string, input UpsertDhikrCounterInput) (*models.DhikrCounter, error)
 

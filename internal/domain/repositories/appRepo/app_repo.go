@@ -178,6 +178,15 @@ func (r *appRepository) GetDhikrCountersForDate(ctx context.Context, userID, dat
 	return counters, nil
 }
 
+func (r *appRepository) GetDhikrs(ctx context.Context) ([]models.Dhikr, error) {
+	var dhikrs []models.Dhikr
+	err := r.db.WithContext(ctx).Order("category ASC, id ASC").Find(&dhikrs).Error
+	if err != nil {
+		return nil, err
+	}
+	return dhikrs, nil
+}
+
 func (r *appRepository) GetDhikrCounter(ctx context.Context, userID, dhikrID, date, session string) (*models.DhikrCounter, error) {
 	var counter models.DhikrCounter
 	err := r.db.WithContext(ctx).

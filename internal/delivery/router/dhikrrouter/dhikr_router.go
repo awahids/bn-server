@@ -7,6 +7,8 @@ import (
 )
 
 func RegisterDhikrRoutes(group *gin.RouterGroup, handler *dhikrhandler.DhikrHandler, authMiddleware gin.HandlerFunc) {
+	group.GET("/dhikrs", handler.GetDhikrs)
+
 	protected := group.Group("")
 	protected.Use(authMiddleware)
 	{

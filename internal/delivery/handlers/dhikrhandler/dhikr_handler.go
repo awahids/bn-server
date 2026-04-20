@@ -22,6 +22,27 @@ func NewDhikrHandler(appService serviceinterface.AppService) *DhikrHandler {
 	return &DhikrHandler{appService: appService}
 }
 
+// GetDhikrs godoc
+// @Summary Get all dhikr items
+// @Description Get the static list of all dhikr items.
+// @Tags Dhikr
+// @Produce json
+// @Success 200 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /dhikrs [get]
+func (h *DhikrHandler) GetDhikrs(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), handlerutil.RequestTimeout)
+	defer cancel()
+
+	dhikrs, err := h.appService.GetDhikrs(ctx)
+	if err != nil {
+		response.Failed(c, http.StatusInternalServerError, "failed to get dhikrs", err.Error())
+		return
+	}
+
+	response.Success(c, http.StatusOK, "ok", dhikrs)
+}
+
 // GetDhikrCounters godoc
 // @Summary Get dhikr counters
 // @Description Get dhikr counters for authenticated user by date.

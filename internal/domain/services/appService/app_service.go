@@ -154,6 +154,10 @@ func (s *appService) DeleteBookmark(ctx context.Context, userID, bookmarkID stri
 	return nil
 }
 
+func (s *appService) GetDhikrs(ctx context.Context) ([]models.Dhikr, error) {
+	return s.repo.GetDhikrs(ctx)
+}
+
 func (s *appService) GetDhikrCounters(ctx context.Context, userID, date string) ([]models.DhikrCounter, error) {
 	return s.repo.GetDhikrCountersForDate(ctx, userID, date)
 }
