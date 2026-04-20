@@ -193,3 +193,61 @@ func (h *ProgressHandler) GetProgressItem(c *gin.Context) {
 
 	response.Success(c, http.StatusOK, "ok", progress)
 }
+
+// GetAchievements godoc
+// @Summary Get user achievements
+// @Description Get authenticated user achievements with unlocked status.
+// @Tags Progress
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} response.APIResponse
+// @Failure 401 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /progress/achievements [get]
+func (h *ProgressHandler) GetAchievements(c *gin.Context) {
+	userID, err := handlerutil.GetUserID(c)
+	if err != nil {
+		handlerutil.FailUnauthorized(c, err)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), handlerutil.RequestTimeout)
+	defer cancel()
+
+	achievements, err := h.appService.GetAchievements(ctx, userID)
+	if err != nil {
+		response.Failed(c, http.StatusInternalServerError, "failed to get achievements", err.Error())
+		return
+	}
+
+	response.Success(c, http.StatusOK, "ok", achievements)
+}
+
+// GetWeeklyActivity godoc
+// @Summary Get user weekly activity
+// @Description Get user's daily activity completion for the last 7 days.
+// @Tags Progress
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} response.APIResponse
+// @Failure 401 {object} response.APIResponse
+// @Failure 500 {object} response.APIResponse
+// @Router /progress/activity [get]
+func (h *ProgressHandler) GetWeeklyActivity(c *gin.Context) {
+	userID, err := handlerutil.GetUserID(c)
+	if err != nil {
+		handlerutil.FailUnauthorized(c, err)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), handlerutil.RequestTimeout)
+	defer cancel()
+
+	activity, err := h.appService.GetWeeklyActivity(ctx, userID)
+	if err != nil {
+		response.Failed(c, http.StatusInternalServerError, "failed to get weekly activity", err.Error())
+		return
+	}
+
+	response.Success(c, http.StatusOK, "ok", activity)
+}

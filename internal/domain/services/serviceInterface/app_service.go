@@ -92,6 +92,21 @@ type QuizStatsResponse struct {
 	LastAttempt       *time.Time                           `json:"lastAttempt"`
 }
 
+type AchievementItem struct {
+	ID          string  `json:"id"`
+	Title       string  `json:"title"`
+	Description string  `json:"description"`
+	Icon        string  `json:"icon"`
+	Unlocked    bool    `json:"unlocked"`
+	Date        *string `json:"date"`
+}
+
+type WeeklyActivityItem struct {
+	Day       string `json:"day"`
+	Completed bool   `json:"completed"`
+}
+
+
 type AppService interface {
 	GetUserProfile(ctx context.Context, userID string) (*models.User, error)
 	UpdateUserProfile(ctx context.Context, userID string, input UpdateUserInput) (*models.User, error)
@@ -111,4 +126,8 @@ type AppService interface {
 	CreateQuizAttempt(ctx context.Context, userID string, input CreateQuizAttemptInput) (*models.QuizAttempt, error)
 	GetQuizCategoryStats(ctx context.Context, userID, category string) (QuizCategoryStats, error)
 	GetQuizStats(ctx context.Context, userID string) (QuizStatsResponse, error)
+
+	GetAchievements(ctx context.Context, userID string) ([]AchievementItem, error)
+	GetWeeklyActivity(ctx context.Context, userID string) ([]WeeklyActivityItem, error)
 }
+

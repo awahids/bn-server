@@ -366,3 +366,117 @@ func avgInt(items []int) float64 {
 	}
 	return float64(total) / float64(len(items))
 }
+
+func (s *appService) GetAchievements(ctx context.Context, userID string) ([]serviceinterface.AchievementItem, error) {
+	// Re-calculating same stats logic as client to award achievements.
+	user, err := s.repo.FindUserByID(ctx, userID)
+	if err != nil || user == nil {
+		return nil, ErrUserNotFound
+	}
+	progress, _ := s.repo.GetUserProgress(ctx, userID, nil)
+	quizStats, _ := s.GetQuizStats(ctx, userID)
+	
+	hijaiyahCompleted := 0
+	for _, p := range progress {
+		if p.Module == "hijaiyah" && p.Completed {
+			hijaiyahCompleted++
+		}
+	}
+
+	achievements := []serviceinterface.AchievementItem{
+		{
+			ID:          "first-letter",
+			Title:       "Huruf Pertama",
+			Description: "Selesaikan huruf Hijaiyah pertama",
+			Icon:        "Languages",
+			Unlocked:    hijaiyahCompleted > 0,
+		},
+		{
+			ID:          "week-streak",
+			Title:       "Seminggu Berturut",
+			Description: "Belajar 7 hari berturut-turut",
+			Icon:        "Flame",
+			Unlocked:    user.Streak >= 7,
+		},
+		{
+			ID:          "quiz-master",
+			Title:       "Master Kuis",
+			Description: "Dapatkan skor 90% atau lebih",
+			Icon:        "Trophy",
+			Unlocked:    quizStats.Overall.BestScore >= 90,
+		},
+	}
+
+	todayStr := time.Now().Format("2006-01-02")
+	dhikrTodayCounters, _ := s.repo.GetDhikrCountersForDate(ctx, userID, todayStr)
+	hasMorning := false
+	hasEvening := false
+	for _, dc := range dhikrTodayCounters {
+		if dc.Completed {
+			if dc.Session == "morning" {
+				hasMorning = true
+			}
+			if dc.Session == "evening" {
+				hasEvening = true
+			}
+		}
+	}
+
+	achievements = append(achievements, serviceinterface.AchievementItem{
+		ID:          "dhikr-complete",
+		Title:       "Dhikr Lengkap",
+		Description: "Selesaikan dhikr pagi dan petang",
+		Icon:        "BicepsFlexed",
+		Unlocked:    hasMorning && hasEvening,
+	})
+
+	return achievements, nil
+}
+
+func (s *appService) GetWeeklyActivity(ctx context.Context, userID string) ([]serviceinterface.WeeklyActivityItem, error) {
+	now := time.Now()
+	activity := make([]serviceinterface.WeeklyActivityItem, 7)
+	
+	// We'll approximate active dates by grabbing progress, quiz, and dhikr history
+	// In a real app we'd query an activity_log table.
+	// We will just do a simple aggregation: if there's any progress last accessed on the day, it's a hit.
+	
+	progress, _ := s.repo.GetUserProgress(ctx, userID, nil)
+	quizzes, _ := s.repo.GetUserQuizAttempts(ctx, userID, nil)
+	
+	activeDates := make(map[string]bool)
+	for _, p := range progress {
+		activeDates[p.LastAccessed.Format("2006-01-02")] = true
+	}
+	for _, q := range quizzes {
+		activeDates[q.CompletedAt.Format("2006-01-02")] = true
+	}
+
+	// Calculate last 7 days ending today
+	dayNames := []string{"Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"}
+	
+	for i := 6; i >= 0; i-- {
+		targetDate := now.AddDate(0, 0, i-6)
+		dateStr := targetDate.Format("2006-01-02")
+		
+		// Check Dhikr for that date
+		hasDhikr := false
+		if dhikrCounters, err := s.repo.GetDhikrCountersForDate(ctx, userID, dateStr); err == nil && len(dhikrCounters) > 0 {
+			for _, dc := range dhikrCounters {
+				if dc.Completed {
+					hasDhikr = true
+					break
+				}
+			}
+		}
+		
+		isActive := activeDates[dateStr] || hasDhikr
+		activity[i] = serviceinterface.WeeklyActivityItem{
+			Day:       dayNames[targetDate.Weekday()],
+			Completed: isActive,
+		}
+	}
+	
+	return activity, nil
+}
+

@@ -12,6 +12,8 @@ func RegisterProgressRoutes(group *gin.RouterGroup, handler *progresshandler.Pro
 	{
 		protected.GET("/progress", handler.GetProgress)
 		protected.POST("/progress", handler.PostProgress)
+		protected.GET("/progress/activity", handler.GetWeeklyActivity)
+		protected.GET("/progress/achievements", handler.GetAchievements)
 		protected.GET("/progress/:module/:itemId", handler.GetProgressItem)
 	}
 }
