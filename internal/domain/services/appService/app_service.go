@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"bn-mobile/server/internal/domain/models"
-	"bn-mobile/server/internal/domain/repositories/repoInterface"
-	"bn-mobile/server/internal/domain/services/serviceInterface"
+	"github.com/awahids/bn-server/internal/domain/models"
+	"github.com/awahids/bn-server/internal/domain/repositories/repointerface"
+	"github.com/awahids/bn-server/internal/domain/services/serviceinterface"
 
 	"gorm.io/gorm"
 )
@@ -116,14 +116,6 @@ func (s *appService) GetBookmarks(ctx context.Context, userID string, bookmarkTy
 }
 
 func (s *appService) CreateBookmark(ctx context.Context, userID string, input serviceinterface.CreateBookmarkInput) (*models.Bookmark, error) {
-	exists, err := s.repo.BookmarkExists(ctx, userID, input.Type, input.ContentID)
-	if err != nil {
-		return nil, err
-	}
-	if exists {
-		return nil, ErrBookmarkExists
-	}
-
 	bookmark := &models.Bookmark{
 		UserID:    userID,
 		Type:      input.Type,
@@ -131,8 +123,12 @@ func (s *appService) CreateBookmark(ctx context.Context, userID string, input se
 		Note:      input.Note,
 		CreatedAt: time.Now(),
 	}
-	if err := s.repo.CreateBookmark(ctx, bookmark); err != nil {
+	created, err := s.repo.CreateBookmark(ctx, bookmark)
+	if err != nil {
 		return nil, err
+	}
+	if !created {
+		return nil, ErrBookmarkExists
 	}
 	return bookmark, nil
 }

@@ -6,9 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"bn-mobile/server/configs"
-	"bn-mobile/server/internal/domain/models"
-	"bn-mobile/server/pkg/utils"
+	"github.com/awahids/bn-server/internal/domain/models"
+	"github.com/awahids/bn-server/pkg/utils"
 )
 
 type mockAuthRepo struct {
@@ -88,14 +87,12 @@ func TestRefreshToken_Success(t *testing.T) {
 		rotateResult: true,
 	}
 
-	svc := NewAuthService(repo, &configs.Config{
-		JWT: configs.JWTConfig{
-			Issuer:          "test-issuer",
-			Secret:          "test-secret",
-			AccessTokenTTL:  15 * time.Minute,
-			RefreshTokenTTL: 7 * 24 * time.Hour,
-		},
-	})
+	svc := NewAuthService(repo, TokenConfig{
+		Issuer:          "test-issuer",
+		Secret:          "test-secret",
+		AccessTokenTTL:  15 * time.Minute,
+		RefreshTokenTTL: 7 * 24 * time.Hour,
+	}, nil)
 
 	pair, err := svc.RefreshToken(context.Background(), "old-refresh-token")
 	if err != nil {
@@ -132,9 +129,7 @@ func TestRefreshToken_Success(t *testing.T) {
 func TestRefreshToken_InvalidToken_NotFound(t *testing.T) {
 	repo := &mockAuthRepo{}
 
-	svc := NewAuthService(repo, &configs.Config{
-		JWT: configs.JWTConfig{Issuer: "test", Secret: "secret", AccessTokenTTL: time.Minute, RefreshTokenTTL: time.Hour},
-	})
+	svc := NewAuthService(repo, TokenConfig{Issuer: "test", Secret: "secret", AccessTokenTTL: time.Minute, RefreshTokenTTL: time.Hour}, nil)
 
 	pair, err := svc.RefreshToken(context.Background(), "missing")
 	if !errors.Is(err, ErrInvalidRefreshToken) {
@@ -153,9 +148,7 @@ func TestRefreshToken_InvalidToken_RotationFailed(t *testing.T) {
 		rotateResult: false,
 	}
 
-	svc := NewAuthService(repo, &configs.Config{
-		JWT: configs.JWTConfig{Issuer: "test", Secret: "secret", AccessTokenTTL: time.Minute, RefreshTokenTTL: time.Hour},
-	})
+	svc := NewAuthService(repo, TokenConfig{Issuer: "test", Secret: "secret", AccessTokenTTL: time.Minute, RefreshTokenTTL: time.Hour}, nil)
 
 	pair, err := svc.RefreshToken(context.Background(), "invalid-after-check")
 	if !errors.Is(err, ErrInvalidRefreshToken) {
@@ -169,9 +162,7 @@ func TestRefreshToken_InvalidToken_RotationFailed(t *testing.T) {
 func TestLogout_WithRefreshToken_RevokesToken(t *testing.T) {
 	repo := &mockAuthRepo{}
 
-	svc := NewAuthService(repo, &configs.Config{
-		JWT: configs.JWTConfig{Issuer: "test", Secret: "secret", AccessTokenTTL: time.Minute, RefreshTokenTTL: time.Hour},
-	})
+	svc := NewAuthService(repo, TokenConfig{Issuer: "test", Secret: "secret", AccessTokenTTL: time.Minute, RefreshTokenTTL: time.Hour}, nil)
 
 	err := svc.Logout(context.Background(), "raw-refresh-token")
 	if err != nil {
@@ -187,9 +178,7 @@ func TestLogout_WithRefreshToken_RevokesToken(t *testing.T) {
 func TestGetCurrentUser_NotFound(t *testing.T) {
 	repo := &mockAuthRepo{findUserResult: nil}
 
-	svc := NewAuthService(repo, &configs.Config{
-		JWT: configs.JWTConfig{Issuer: "test", Secret: "secret", AccessTokenTTL: time.Minute, RefreshTokenTTL: time.Hour},
-	})
+	svc := NewAuthService(repo, TokenConfig{Issuer: "test", Secret: "secret", AccessTokenTTL: time.Minute, RefreshTokenTTL: time.Hour}, nil)
 
 	user, err := svc.GetCurrentUser(context.Background(), "missing")
 	if !errors.Is(err, ErrUserNotFound) {

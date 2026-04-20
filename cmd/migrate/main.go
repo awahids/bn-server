@@ -7,7 +7,7 @@ import (
 	"log"
 	"path/filepath"
 
-	"bn-mobile/server/configs"
+	"github.com/awahids/bn-server/configs"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"

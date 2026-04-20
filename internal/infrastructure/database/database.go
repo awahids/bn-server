@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	"bn-mobile/server/configs"
+	"github.com/awahids/bn-server/configs"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"

@@ -2,19 +2,14 @@ package authservice
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"fmt"
-	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
-	"bn-mobile/server/configs"
-	"bn-mobile/server/internal/domain/models"
-	"bn-mobile/server/internal/domain/repositories/repoInterface"
-	"bn-mobile/server/internal/domain/services/serviceInterface"
-	"bn-mobile/server/pkg/utils"
+	"github.com/awahids/bn-server/internal/domain/models"
+	"github.com/awahids/bn-server/internal/domain/repositories/repointerface"
+	"github.com/awahids/bn-server/internal/domain/services/serviceinterface"
+	"github.com/awahids/bn-server/pkg/utils"
 )
 
 var (
@@ -26,26 +21,42 @@ var (
 	ErrUserNotFound             = errors.New("user not found")
 )
 
-type authService struct {
-	repo repointerface.AuthRepository
-	cfg  *configs.Config
+type TokenConfig struct {
+	Issuer          string
+	Secret          string
+	AccessTokenTTL  time.Duration
+	RefreshTokenTTL time.Duration
 }
 
-func NewAuthService(repo repointerface.AuthRepository, cfg *configs.Config) serviceinterface.AuthService {
-	return &authService{repo: repo, cfg: cfg}
+type authService struct {
+	repo               repointerface.AuthRepository
+	tokenCfg           TokenConfig
+	googleAuthProvider serviceinterface.GoogleAuthProvider
+}
+
+func NewAuthService(
+	repo repointerface.AuthRepository,
+	tokenCfg TokenConfig,
+	googleAuthProvider serviceinterface.GoogleAuthProvider,
+) serviceinterface.AuthService {
+	return &authService{
+		repo:               repo,
+		tokenCfg:           tokenCfg,
+		googleAuthProvider: googleAuthProvider,
+	}
 }
 
 func (s *authService) LoginWithGoogle(ctx context.Context, idTokenRaw string) (*models.User, *serviceinterface.TokenPair, error) {
 	if strings.TrimSpace(idTokenRaw) == "" {
 		return nil, nil, ErrInvalidGoogleToken
 	}
-	if strings.TrimSpace(s.cfg.Google.ClientID) == "" {
-		return nil, nil, errors.New("GOOGLE_CLIENT_ID is not configured")
+	if s.googleAuthProvider == nil {
+		return nil, nil, ErrGoogleOAuthNotConfigured
 	}
 
-	tokenInfo, err := s.validateGoogleIDToken(ctx, idTokenRaw)
+	tokenInfo, err := s.googleAuthProvider.GetTokenInfoByIDToken(ctx, idTokenRaw)
 	if err != nil {
-		return nil, nil, ErrInvalidGoogleToken
+		return nil, nil, mapGoogleAuthProviderError(err)
 	}
 
 	return s.loginWithGoogleTokenInfo(ctx, tokenInfo)
@@ -58,15 +69,13 @@ func (s *authService) LoginWithGoogleOAuthCode(
 	if strings.TrimSpace(code) == "" {
 		return nil, nil, ErrInvalidGoogleOAuthCode
 	}
-
-	idToken, err := s.exchangeGoogleOAuthCode(ctx, code, redirectURI)
-	if err != nil {
-		return nil, nil, err
+	if s.googleAuthProvider == nil {
+		return nil, nil, ErrGoogleOAuthNotConfigured
 	}
 
-	tokenInfo, err := s.validateGoogleIDToken(ctx, idToken)
+	tokenInfo, err := s.googleAuthProvider.GetTokenInfoByOAuthCode(ctx, code, redirectURI)
 	if err != nil {
-		return nil, nil, ErrInvalidGoogleToken
+		return nil, nil, mapGoogleAuthProviderError(err)
 	}
 
 	return s.loginWithGoogleTokenInfo(ctx, tokenInfo)
@@ -74,9 +83,9 @@ func (s *authService) LoginWithGoogleOAuthCode(
 
 func (s *authService) loginWithGoogleTokenInfo(
 	ctx context.Context,
-	tokenInfo *googleTokenInfoResponse,
+	tokenInfo *serviceinterface.GoogleTokenInfo,
 ) (*models.User, *serviceinterface.TokenPair, error) {
-	email := strings.ToLower(tokenInfo.Email)
+	email := strings.ToLower(strings.TrimSpace(tokenInfo.Email))
 	if email == "" {
 		return nil, nil, ErrInvalidGoogleToken
 	}
@@ -159,12 +168,12 @@ func (s *authService) RefreshToken(ctx context.Context, refreshToken string) (*s
 	}
 
 	accessToken, expiresIn, err := utils.GenerateAccessToken(
-		s.cfg.JWT.Secret,
-		s.cfg.JWT.Issuer,
+		s.tokenCfg.Secret,
+		s.tokenCfg.Issuer,
 		storedToken.User.ID,
 		storedToken.User.Email,
 		string(storedToken.User.Role),
-		s.cfg.JWT.AccessTokenTTL,
+		s.tokenCfg.AccessTokenTTL,
 	)
 	if err != nil {
 		return nil, err
@@ -176,7 +185,7 @@ func (s *authService) RefreshToken(ctx context.Context, refreshToken string) (*s
 	}
 
 	newRefreshHash := utils.HashToken(newRefreshRaw)
-	newExpiresAt := time.Now().Add(s.cfg.JWT.RefreshTokenTTL)
+	newExpiresAt := time.Now().Add(s.tokenCfg.RefreshTokenTTL)
 
 	rotated, err := s.repo.RotateRefreshToken(ctx, hash, newRefreshHash, newExpiresAt)
 	if err != nil {
@@ -216,12 +225,12 @@ func (s *authService) GetCurrentUser(ctx context.Context, userID string) (*model
 
 func (s *authService) issueTokenPair(ctx context.Context, user *models.User) (*serviceinterface.TokenPair, error) {
 	accessToken, expiresIn, err := utils.GenerateAccessToken(
-		s.cfg.JWT.Secret,
-		s.cfg.JWT.Issuer,
+		s.tokenCfg.Secret,
+		s.tokenCfg.Issuer,
 		user.ID,
 		user.Email,
 		string(user.Role),
-		s.cfg.JWT.AccessTokenTTL,
+		s.tokenCfg.AccessTokenTTL,
 	)
 	if err != nil {
 		return nil, err
@@ -232,7 +241,7 @@ func (s *authService) issueTokenPair(ctx context.Context, user *models.User) (*s
 		return nil, err
 	}
 
-	expiresAt := time.Now().Add(s.cfg.JWT.RefreshTokenTTL)
+	expiresAt := time.Now().Add(s.tokenCfg.RefreshTokenTTL)
 	refreshEntity := &models.RefreshToken{
 		UserID:    user.ID,
 		TokenHash: utils.HashToken(rawRefreshToken),
@@ -262,135 +271,15 @@ func fallbackName(name, email string) string {
 	return localPart[0]
 }
 
-type googleTokenInfoResponse struct {
-	IssuedTo      string `json:"issued_to"`
-	Audience      string `json:"aud"`
-	Subject       string `json:"sub"`
-	Email         string `json:"email"`
-	EmailVerified bool   `json:"email_verified,string"`
-	Name          string `json:"name"`
-	Picture       string `json:"picture"`
-	ExpiresIn     string `json:"expires_in"`
-}
-
-type googleTokenExchangeResponse struct {
-	AccessToken      string `json:"access_token"`
-	ExpiresIn        int64  `json:"expires_in"`
-	IDToken          string `json:"id_token"`
-	RefreshToken     string `json:"refresh_token"`
-	Scope            string `json:"scope"`
-	TokenType        string `json:"token_type"`
-	Error            string `json:"error"`
-	ErrorDescription string `json:"error_description"`
-}
-
-func (s *authService) exchangeGoogleOAuthCode(
-	ctx context.Context,
-	code, redirectURI string,
-) (string, error) {
-	clientID := strings.TrimSpace(s.cfg.Google.ClientID)
-	clientSecret := strings.TrimSpace(s.cfg.Google.ClientSecret)
-	redirectURI = strings.TrimSpace(redirectURI)
-
-	if clientID == "" || clientSecret == "" {
-		return "", ErrGoogleOAuthNotConfigured
+func mapGoogleAuthProviderError(err error) error {
+	switch {
+	case errors.Is(err, serviceinterface.ErrGoogleAuthInvalidIDToken):
+		return ErrInvalidGoogleToken
+	case errors.Is(err, serviceinterface.ErrGoogleAuthInvalidOAuthCode):
+		return ErrInvalidGoogleOAuthCode
+	case errors.Is(err, serviceinterface.ErrGoogleAuthNotConfigured):
+		return ErrGoogleOAuthNotConfigured
+	default:
+		return err
 	}
-	if strings.TrimSpace(code) == "" || redirectURI == "" {
-		return "", ErrInvalidGoogleOAuthCode
-	}
-	if redirectURI != "postmessage" {
-		parsed, err := url.ParseRequestURI(redirectURI)
-		if err != nil || (parsed.Scheme != "https" && parsed.Scheme != "http") {
-			return "", ErrInvalidGoogleOAuthCode
-		}
-	}
-
-	form := url.Values{}
-	form.Set("code", code)
-	form.Set("client_id", clientID)
-	form.Set("client_secret", clientSecret)
-	form.Set("grant_type", "authorization_code")
-	form.Set("redirect_uri", redirectURI)
-
-	req, err := http.NewRequestWithContext(
-		ctx,
-		http.MethodPost,
-		"https://oauth2.googleapis.com/token",
-		strings.NewReader(form.Encode()),
-	)
-	if err != nil {
-		return "", err
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer res.Body.Close()
-
-	var payload googleTokenExchangeResponse
-	if err := json.NewDecoder(res.Body).Decode(&payload); err != nil {
-		return "", err
-	}
-
-	if res.StatusCode != http.StatusOK {
-		if payload.Error == "invalid_grant" || payload.Error == "invalid_request" {
-			if payload.ErrorDescription != "" {
-				return "", fmt.Errorf("%w: %s", ErrInvalidGoogleOAuthCode, payload.ErrorDescription)
-			}
-			return "", ErrInvalidGoogleOAuthCode
-		}
-		if payload.ErrorDescription != "" {
-			return "", fmt.Errorf("google token exchange failed: %s", payload.ErrorDescription)
-		}
-		if payload.Error != "" {
-			return "", fmt.Errorf("google token exchange failed: %s", payload.Error)
-		}
-		return "", fmt.Errorf("google token exchange failed with status %d", res.StatusCode)
-	}
-
-	idToken := strings.TrimSpace(payload.IDToken)
-	if idToken == "" {
-		return "", errors.New("google token exchange response missing id_token")
-	}
-
-	return idToken, nil
-}
-
-func (s *authService) validateGoogleIDToken(ctx context.Context, rawIDToken string) (*googleTokenInfoResponse, error) {
-	endpoint := "https://oauth2.googleapis.com/tokeninfo?id_token=" + url.QueryEscape(rawIDToken)
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer res.Body.Close()
-
-	if res.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("google tokeninfo responded with status %d", res.StatusCode)
-	}
-
-	var payload googleTokenInfoResponse
-	if err := json.NewDecoder(res.Body).Decode(&payload); err != nil {
-		return nil, err
-	}
-
-	audience := strings.TrimSpace(payload.Audience)
-	if audience == "" {
-		audience = strings.TrimSpace(payload.IssuedTo)
-	}
-	if audience != strings.TrimSpace(s.cfg.Google.ClientID) {
-		return nil, errors.New("google token audience mismatch")
-	}
-	if strings.TrimSpace(payload.Subject) == "" {
-		return nil, errors.New("google token subject is empty")
-	}
-
-	return &payload, nil
 }

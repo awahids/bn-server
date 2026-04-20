@@ -82,7 +82,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/bn-mobile_server_internal_delivery_data_request_authReq.GoogleLoginRequest"
+                            "$ref": "#/definitions/bn-mobile_server_internal_delivery_data_request_authreq.GoogleLoginRequest"
                         }
                     }
                 ],
@@ -140,7 +140,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/bn-mobile_server_internal_delivery_data_request_authReq.GoogleOAuthCodeLoginRequest"
+                            "$ref": "#/definitions/bn-mobile_server_internal_delivery_data_request_authreq.GoogleOAuthCodeLoginRequest"
                         }
                     }
                 ],
@@ -359,7 +359,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/bn-mobile_server_internal_delivery_data_request_appReq.CreateBookmarkRequest"
+                            "$ref": "#/definitions/bn-mobile_server_internal_delivery_data_request_bookmarkreq.CreateBookmarkRequest"
                         }
                     }
                 ],
@@ -535,7 +535,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/bn-mobile_server_internal_delivery_data_request_appReq.UpsertDhikrCounterRequest"
+                            "$ref": "#/definitions/bn-mobile_server_internal_delivery_data_request_dhikrreq.UpsertDhikrCounterRequest"
                         }
                     }
                 ],
@@ -717,7 +717,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/bn-mobile_server_internal_delivery_data_request_appReq.UpsertProgressRequest"
+                            "$ref": "#/definitions/bn-mobile_server_internal_delivery_data_request_progressreq.UpsertProgressRequest"
                         }
                     }
                 ],
@@ -876,7 +876,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/bn-mobile_server_internal_delivery_data_request_appReq.CreateQuizAttemptRequest"
+                            "$ref": "#/definitions/bn-mobile_server_internal_delivery_data_request_quizreq.CreateQuizAttemptRequest"
                         }
                     }
                 ],
@@ -1019,7 +1019,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/bn-mobile_server_internal_delivery_data_request_appReq.UpdateUserRequest"
+                            "$ref": "#/definitions/bn-mobile_server_internal_delivery_data_request_userreq.UpdateUserRequest"
                         }
                     }
                 ],
@@ -1065,7 +1065,33 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "bn-mobile_server_internal_delivery_data_request_appReq.CreateBookmarkRequest": {
+        "bn-mobile_server_internal_delivery_data_request_authreq.GoogleLoginRequest": {
+            "type": "object",
+            "required": [
+                "idToken"
+            ],
+            "properties": {
+                "idToken": {
+                    "type": "string"
+                }
+            }
+        },
+        "bn-mobile_server_internal_delivery_data_request_authreq.GoogleOAuthCodeLoginRequest": {
+            "type": "object",
+            "required": [
+                "code",
+                "redirectUri"
+            ],
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "redirectUri": {
+                    "type": "string"
+                }
+            }
+        },
+        "bn-mobile_server_internal_delivery_data_request_bookmarkreq.CreateBookmarkRequest": {
             "type": "object",
             "properties": {
                 "contentId": {
@@ -1079,71 +1105,7 @@ const docTemplate = `{
                 }
             }
         },
-        "bn-mobile_server_internal_delivery_data_request_appReq.CreateQuizAttemptRequest": {
-            "type": "object",
-            "properties": {
-                "answers": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/bn-mobile_server_internal_delivery_data_request_appReq.QuizAnswerRequest"
-                    }
-                },
-                "category": {
-                    "type": "string"
-                },
-                "score": {
-                    "type": "integer"
-                },
-                "timeSpent": {
-                    "type": "integer"
-                },
-                "totalQuestions": {
-                    "type": "integer"
-                }
-            }
-        },
-        "bn-mobile_server_internal_delivery_data_request_appReq.QuizAnswerRequest": {
-            "type": "object",
-            "properties": {
-                "correctAnswer": {
-                    "type": "string"
-                },
-                "isCorrect": {
-                    "type": "boolean"
-                },
-                "questionId": {
-                    "type": "string"
-                },
-                "timeSpent": {
-                    "type": "integer"
-                },
-                "userAnswer": {
-                    "type": "string"
-                }
-            }
-        },
-        "bn-mobile_server_internal_delivery_data_request_appReq.UpdateUserRequest": {
-            "type": "object",
-            "properties": {
-                "dailyProgress": {
-                    "type": "integer"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "preferences": {
-                    "type": "object",
-                    "additionalProperties": {}
-                },
-                "streak": {
-                    "type": "integer"
-                },
-                "username": {
-                    "type": "string"
-                }
-            }
-        },
-        "bn-mobile_server_internal_delivery_data_request_appReq.UpsertDhikrCounterRequest": {
+        "bn-mobile_server_internal_delivery_data_request_dhikrreq.UpsertDhikrCounterRequest": {
             "type": "object",
             "properties": {
                 "completed": {
@@ -1166,7 +1128,7 @@ const docTemplate = `{
                 }
             }
         },
-        "bn-mobile_server_internal_delivery_data_request_appReq.UpsertProgressRequest": {
+        "bn-mobile_server_internal_delivery_data_request_progressreq.UpsertProgressRequest": {
             "type": "object",
             "properties": {
                 "completed": {
@@ -1189,28 +1151,66 @@ const docTemplate = `{
                 }
             }
         },
-        "bn-mobile_server_internal_delivery_data_request_authReq.GoogleLoginRequest": {
+        "bn-mobile_server_internal_delivery_data_request_quizreq.CreateQuizAttemptRequest": {
             "type": "object",
-            "required": [
-                "idToken"
-            ],
             "properties": {
-                "idToken": {
+                "answers": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/bn-mobile_server_internal_delivery_data_request_quizreq.QuizAnswerRequest"
+                    }
+                },
+                "category": {
+                    "type": "string"
+                },
+                "score": {
+                    "type": "integer"
+                },
+                "timeSpent": {
+                    "type": "integer"
+                },
+                "totalQuestions": {
+                    "type": "integer"
+                }
+            }
+        },
+        "bn-mobile_server_internal_delivery_data_request_quizreq.QuizAnswerRequest": {
+            "type": "object",
+            "properties": {
+                "correctAnswer": {
+                    "type": "string"
+                },
+                "isCorrect": {
+                    "type": "boolean"
+                },
+                "questionId": {
+                    "type": "string"
+                },
+                "timeSpent": {
+                    "type": "integer"
+                },
+                "userAnswer": {
                     "type": "string"
                 }
             }
         },
-        "bn-mobile_server_internal_delivery_data_request_authReq.GoogleOAuthCodeLoginRequest": {
+        "bn-mobile_server_internal_delivery_data_request_userreq.UpdateUserRequest": {
             "type": "object",
-            "required": [
-                "code",
-                "redirectUri"
-            ],
             "properties": {
-                "code": {
+                "dailyProgress": {
+                    "type": "integer"
+                },
+                "name": {
                     "type": "string"
                 },
-                "redirectUri": {
+                "preferences": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "streak": {
+                    "type": "integer"
+                },
+                "username": {
                     "type": "string"
                 }
             }

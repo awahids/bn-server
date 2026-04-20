@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"strings"
 
-	"bn-mobile/server/internal/delivery/data/response"
-	"bn-mobile/server/pkg/utils"
+	"github.com/awahids/bn-server/internal/delivery/data/response"
+	"github.com/awahids/bn-server/pkg/utils"
 
 	"github.com/gin-gonic/gin"
 )

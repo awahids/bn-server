@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"bn-mobile/server/internal/delivery/data/response"
+	"github.com/awahids/bn-server/internal/delivery/data/response"
 
 	"github.com/gin-gonic/gin"
 )

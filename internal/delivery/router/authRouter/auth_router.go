@@ -1,7 +1,7 @@
 package authrouter
 
 import (
-	authhandler "bn-mobile/server/internal/delivery/handlers/authHandler"
+	"github.com/awahids/bn-server/internal/delivery/handlers/authhandler"
 
 	"github.com/gin-gonic/gin"
 )

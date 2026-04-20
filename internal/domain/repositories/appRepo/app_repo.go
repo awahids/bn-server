@@ -5,8 +5,8 @@ import (
 	"errors"
 	"time"
 
-	"bn-mobile/server/internal/domain/models"
-	"bn-mobile/server/internal/domain/repositories/repoInterface"
+	"github.com/awahids/bn-server/internal/domain/models"
+	"github.com/awahids/bn-server/internal/domain/repositories/repointerface"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -125,20 +125,22 @@ func (r *appRepository) GetUserBookmarks(ctx context.Context, userID string, boo
 	return bookmarks, nil
 }
 
-func (r *appRepository) BookmarkExists(ctx context.Context, userID, bookmarkType, contentID string) (bool, error) {
-	var total int64
-	err := r.db.WithContext(ctx).
-		Model(&models.Bookmark{}).
-		Where("user_id = ? AND type = ? AND content_id = ?", userID, bookmarkType, contentID).
-		Count(&total).Error
-	if err != nil {
-		return false, err
+func (r *appRepository) CreateBookmark(ctx context.Context, bookmark *models.Bookmark) (bool, error) {
+	result := r.db.WithContext(ctx).
+		Clauses(clause.OnConflict{
+			Columns: []clause.Column{
+				{Name: "user_id"},
+				{Name: "type"},
+				{Name: "content_id"},
+			},
+			DoNothing: true,
+		}).
+		Create(bookmark)
+	if result.Error != nil {
+		return false, result.Error
 	}
-	return total > 0, nil
-}
 
-func (r *appRepository) CreateBookmark(ctx context.Context, bookmark *models.Bookmark) error {
-	return r.db.WithContext(ctx).Create(bookmark).Error
+	return result.RowsAffected > 0, nil
 }
 
 func (r *appRepository) FindBookmarkByID(ctx context.Context, bookmarkID string) (*models.Bookmark, error) {
@@ -191,24 +193,30 @@ func (r *appRepository) GetDhikrCounter(ctx context.Context, userID, dhikrID, da
 }
 
 func (r *appRepository) UpsertDhikrCounter(ctx context.Context, counter *models.DhikrCounter) (*models.DhikrCounter, error) {
-	existing, err := r.GetDhikrCounter(ctx, counter.UserID, counter.DhikrID, counter.Date, counter.Session)
-	if err != nil {
+	if err := r.db.WithContext(ctx).
+		Clauses(
+			clause.OnConflict{
+				Columns: []clause.Column{
+					{Name: "user_id"},
+					{Name: "dhikr_id"},
+					{Name: "date"},
+					{Name: "session"},
+				},
+				DoUpdates: clause.Assignments(map[string]any{
+					"count":      counter.Count,
+					"target":     counter.Target,
+					"completed":  counter.Completed,
+					"updated_at": time.Now(),
+					// Ensure soft-deleted rows can be revived by upsert.
+					"deleted_at": nil,
+				}),
+			},
+			clause.Returning{},
+		).
+		Create(counter).Error; err != nil {
 		return nil, err
 	}
 
-	if existing != nil {
-		existing.Count = counter.Count
-		existing.Target = counter.Target
-		existing.Completed = counter.Completed
-		if err := r.db.WithContext(ctx).Save(existing).Error; err != nil {
-			return nil, err
-		}
-		return existing, nil
-	}
-
-	if err := r.db.WithContext(ctx).Create(counter).Error; err != nil {
-		return nil, err
-	}
 	return counter, nil
 }
 

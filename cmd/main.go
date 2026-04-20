@@ -21,16 +21,23 @@ import (
 	"syscall"
 	"time"
 
-	"bn-mobile/server/configs"
-	_ "bn-mobile/server/docs"
-	apphandler "bn-mobile/server/internal/delivery/handlers/appHandler"
-	authhandler "bn-mobile/server/internal/delivery/handlers/authHandler"
-	"bn-mobile/server/internal/delivery/router"
-	apprepo "bn-mobile/server/internal/domain/repositories/appRepo"
-	authrepo "bn-mobile/server/internal/domain/repositories/authRepo"
-	appservice "bn-mobile/server/internal/domain/services/appService"
-	authservice "bn-mobile/server/internal/domain/services/authService"
-	"bn-mobile/server/internal/infrastructure/database"
+	"github.com/awahids/bn-server/configs"
+	_ "github.com/awahids/bn-server/docs"
+	"github.com/awahids/bn-server/internal/delivery/handlers/authhandler"
+	"github.com/awahids/bn-server/internal/delivery/handlers/bookmarkhandler"
+	"github.com/awahids/bn-server/internal/delivery/handlers/dhikrhandler"
+	"github.com/awahids/bn-server/internal/delivery/handlers/progresshandler"
+	"github.com/awahids/bn-server/internal/delivery/handlers/publichandler"
+	"github.com/awahids/bn-server/internal/delivery/handlers/quizhandler"
+	"github.com/awahids/bn-server/internal/delivery/handlers/userhandler"
+	"github.com/awahids/bn-server/internal/delivery/router"
+	apprepo "github.com/awahids/bn-server/internal/domain/repositories/apprepo"
+	authrepo "github.com/awahids/bn-server/internal/domain/repositories/authrepo"
+	appservice "github.com/awahids/bn-server/internal/domain/services/appservice"
+	authservice "github.com/awahids/bn-server/internal/domain/services/authservice"
+	publicservice "github.com/awahids/bn-server/internal/domain/services/publicservice"
+	"github.com/awahids/bn-server/internal/infrastructure/database"
+	"github.com/awahids/bn-server/internal/infrastructure/googleauth"
 )
 
 func main() {
@@ -46,14 +53,44 @@ func main() {
 	defer database.Close(db)
 
 	authRepository := authrepo.NewAuthRepository(db)
-	authService := authservice.NewAuthService(authRepository, cfg)
+	googleAuthProvider := googleauth.NewGoogleAuthProvider(
+		cfg.Google.ClientID,
+		cfg.Google.ClientSecret,
+		nil,
+	)
+	authService := authservice.NewAuthService(
+		authRepository,
+		authservice.TokenConfig{
+			Issuer:          cfg.JWT.Issuer,
+			Secret:          cfg.JWT.Secret,
+			AccessTokenTTL:  cfg.JWT.AccessTokenTTL,
+			RefreshTokenTTL: cfg.JWT.RefreshTokenTTL,
+		},
+		googleAuthProvider,
+	)
 	authHandler := authhandler.NewAuthHandler(authService, cfg.AuthCookie)
+
 	appRepository := apprepo.NewAppRepository(db)
 	appService := appservice.NewAppService(appRepository)
-	appHandler := apphandler.NewAppHandler(appService)
-	publicHandler := apphandler.NewPublicHandler()
+	userHandler := userhandler.NewUserHandler(appService)
+	progressHandler := progresshandler.NewProgressHandler(appService)
+	bookmarkHandler := bookmarkhandler.NewBookmarkHandler(appService)
+	dhikrHandler := dhikrhandler.NewDhikrHandler(appService)
+	quizHandler := quizhandler.NewQuizHandler(appService)
 
-	engine := router.NewRouter(cfg, authHandler, appHandler, publicHandler)
+	publicService := publicservice.NewPublicService(nil)
+	publicHandler := publichandler.NewPublicHandler(publicService)
+
+	engine := router.NewRouter(
+		cfg,
+		authHandler,
+		userHandler,
+		progressHandler,
+		bookmarkHandler,
+		dhikrHandler,
+		quizHandler,
+		publicHandler,
+	)
 
 	server := &http.Server{
 		Addr:              net.JoinHostPort(cfg.Server.Host, cfg.Server.Port),

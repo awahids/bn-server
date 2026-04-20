@@ -3,7 +3,7 @@ package authres
 import (
 	"time"
 
-	"bn-mobile/server/internal/domain/models"
+	"github.com/awahids/bn-server/internal/domain/models"
 )
 
 type UserProfile struct {

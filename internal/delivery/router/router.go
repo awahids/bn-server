@@ -4,13 +4,22 @@ import (
 	"net/http"
 	"time"
 
-	"bn-mobile/server/configs"
-	apphandler "bn-mobile/server/internal/delivery/handlers/appHandler"
-	authhandler "bn-mobile/server/internal/delivery/handlers/authHandler"
-	"bn-mobile/server/internal/delivery/middleware"
-	approuter "bn-mobile/server/internal/delivery/router/appRouter"
-	authrouter "bn-mobile/server/internal/delivery/router/authRouter"
-	publicrouter "bn-mobile/server/internal/delivery/router/publicRouter"
+	"github.com/awahids/bn-server/configs"
+	"github.com/awahids/bn-server/internal/delivery/handlers/authhandler"
+	"github.com/awahids/bn-server/internal/delivery/handlers/bookmarkhandler"
+	"github.com/awahids/bn-server/internal/delivery/handlers/dhikrhandler"
+	"github.com/awahids/bn-server/internal/delivery/handlers/progresshandler"
+	"github.com/awahids/bn-server/internal/delivery/handlers/publichandler"
+	"github.com/awahids/bn-server/internal/delivery/handlers/quizhandler"
+	"github.com/awahids/bn-server/internal/delivery/handlers/userhandler"
+	"github.com/awahids/bn-server/internal/delivery/middleware"
+	authrouter "github.com/awahids/bn-server/internal/delivery/router/authrouter"
+	bookmarkrouter "github.com/awahids/bn-server/internal/delivery/router/bookmarkrouter"
+	dhikrrouter "github.com/awahids/bn-server/internal/delivery/router/dhikrrouter"
+	progressrouter "github.com/awahids/bn-server/internal/delivery/router/progressrouter"
+	publicrouter "github.com/awahids/bn-server/internal/delivery/router/publicrouter"
+	quizrouter "github.com/awahids/bn-server/internal/delivery/router/quizrouter"
+	userrouter "github.com/awahids/bn-server/internal/delivery/router/userrouter"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -35,8 +44,12 @@ func healthCheck(c *gin.Context) {
 func NewRouter(
 	cfg *configs.Config,
 	authHandler *authhandler.AuthHandler,
-	appHandler *apphandler.AppHandler,
-	publicHandler *apphandler.PublicHandler,
+	userHandler *userhandler.UserHandler,
+	progressHandler *progresshandler.ProgressHandler,
+	bookmarkHandler *bookmarkhandler.BookmarkHandler,
+	dhikrHandler *dhikrhandler.DhikrHandler,
+	quizHandler *quizhandler.QuizHandler,
+	publicHandler *publichandler.PublicHandler,
 ) *gin.Engine {
 	engine := gin.New()
 	engine.Use(gin.Logger())
@@ -77,8 +90,18 @@ func NewRouter(
 			Logout:  logoutLimiter.Middleware("auth_logout"),
 		},
 	)
-	approuter.RegisterAppRoutes(apiV1, appHandler, authMiddleware)
-	approuter.RegisterAppRoutes(apiLegacy, appHandler, authMiddleware)
+
+	userrouter.RegisterUserRoutes(apiV1, userHandler, authMiddleware)
+	progressrouter.RegisterProgressRoutes(apiV1, progressHandler, authMiddleware)
+	bookmarkrouter.RegisterBookmarkRoutes(apiV1, bookmarkHandler, authMiddleware)
+	dhikrrouter.RegisterDhikrRoutes(apiV1, dhikrHandler, authMiddleware)
+	quizrouter.RegisterQuizRoutes(apiV1, quizHandler, authMiddleware)
+
+	userrouter.RegisterUserRoutes(apiLegacy, userHandler, authMiddleware)
+	progressrouter.RegisterProgressRoutes(apiLegacy, progressHandler, authMiddleware)
+	bookmarkrouter.RegisterBookmarkRoutes(apiLegacy, bookmarkHandler, authMiddleware)
+	dhikrrouter.RegisterDhikrRoutes(apiLegacy, dhikrHandler, authMiddleware)
+	quizrouter.RegisterQuizRoutes(apiLegacy, quizHandler, authMiddleware)
 
 	return engine
 }

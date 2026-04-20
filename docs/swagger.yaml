@@ -1,6 +1,23 @@
 basePath: /api/v1
 definitions:
-  bn-mobile_server_internal_delivery_data_request_appReq.CreateBookmarkRequest:
+  bn-mobile_server_internal_delivery_data_request_authreq.GoogleLoginRequest:
+    properties:
+      idToken:
+        type: string
+    required:
+    - idToken
+    type: object
+  bn-mobile_server_internal_delivery_data_request_authreq.GoogleOAuthCodeLoginRequest:
+    properties:
+      code:
+        type: string
+      redirectUri:
+        type: string
+    required:
+    - code
+    - redirectUri
+    type: object
+  bn-mobile_server_internal_delivery_data_request_bookmarkreq.CreateBookmarkRequest:
     properties:
       contentId:
         type: string
@@ -9,49 +26,7 @@ definitions:
       type:
         type: string
     type: object
-  bn-mobile_server_internal_delivery_data_request_appReq.CreateQuizAttemptRequest:
-    properties:
-      answers:
-        items:
-          $ref: '#/definitions/bn-mobile_server_internal_delivery_data_request_appReq.QuizAnswerRequest'
-        type: array
-      category:
-        type: string
-      score:
-        type: integer
-      timeSpent:
-        type: integer
-      totalQuestions:
-        type: integer
-    type: object
-  bn-mobile_server_internal_delivery_data_request_appReq.QuizAnswerRequest:
-    properties:
-      correctAnswer:
-        type: string
-      isCorrect:
-        type: boolean
-      questionId:
-        type: string
-      timeSpent:
-        type: integer
-      userAnswer:
-        type: string
-    type: object
-  bn-mobile_server_internal_delivery_data_request_appReq.UpdateUserRequest:
-    properties:
-      dailyProgress:
-        type: integer
-      name:
-        type: string
-      preferences:
-        additionalProperties: {}
-        type: object
-      streak:
-        type: integer
-      username:
-        type: string
-    type: object
-  bn-mobile_server_internal_delivery_data_request_appReq.UpsertDhikrCounterRequest:
+  bn-mobile_server_internal_delivery_data_request_dhikrreq.UpsertDhikrCounterRequest:
     properties:
       completed:
         type: boolean
@@ -66,7 +41,7 @@ definitions:
       target:
         type: integer
     type: object
-  bn-mobile_server_internal_delivery_data_request_appReq.UpsertProgressRequest:
+  bn-mobile_server_internal_delivery_data_request_progressreq.UpsertProgressRequest:
     properties:
       completed:
         type: boolean
@@ -81,22 +56,47 @@ definitions:
       timeSpent:
         type: integer
     type: object
-  bn-mobile_server_internal_delivery_data_request_authReq.GoogleLoginRequest:
+  bn-mobile_server_internal_delivery_data_request_quizreq.CreateQuizAttemptRequest:
     properties:
-      idToken:
+      answers:
+        items:
+          $ref: '#/definitions/bn-mobile_server_internal_delivery_data_request_quizreq.QuizAnswerRequest'
+        type: array
+      category:
         type: string
-    required:
-    - idToken
+      score:
+        type: integer
+      timeSpent:
+        type: integer
+      totalQuestions:
+        type: integer
     type: object
-  bn-mobile_server_internal_delivery_data_request_authReq.GoogleOAuthCodeLoginRequest:
+  bn-mobile_server_internal_delivery_data_request_quizreq.QuizAnswerRequest:
     properties:
-      code:
+      correctAnswer:
         type: string
-      redirectUri:
+      isCorrect:
+        type: boolean
+      questionId:
         type: string
-    required:
-    - code
-    - redirectUri
+      timeSpent:
+        type: integer
+      userAnswer:
+        type: string
+    type: object
+  bn-mobile_server_internal_delivery_data_request_userreq.UpdateUserRequest:
+    properties:
+      dailyProgress:
+        type: integer
+      name:
+        type: string
+      preferences:
+        additionalProperties: {}
+        type: object
+      streak:
+        type: integer
+      username:
+        type: string
     type: object
   bn-mobile_server_internal_delivery_data_response.APIResponse:
     properties:
@@ -156,7 +156,7 @@ paths:
         name: payload
         required: true
         schema:
-          $ref: '#/definitions/bn-mobile_server_internal_delivery_data_request_authReq.GoogleLoginRequest'
+          $ref: '#/definitions/bn-mobile_server_internal_delivery_data_request_authreq.GoogleLoginRequest'
       produces:
       - application/json
       responses:
@@ -195,7 +195,7 @@ paths:
         name: payload
         required: true
         schema:
-          $ref: '#/definitions/bn-mobile_server_internal_delivery_data_request_authReq.GoogleOAuthCodeLoginRequest'
+          $ref: '#/definitions/bn-mobile_server_internal_delivery_data_request_authreq.GoogleOAuthCodeLoginRequest'
       produces:
       - application/json
       responses:
@@ -333,7 +333,7 @@ paths:
         name: payload
         required: true
         schema:
-          $ref: '#/definitions/bn-mobile_server_internal_delivery_data_request_appReq.CreateBookmarkRequest'
+          $ref: '#/definitions/bn-mobile_server_internal_delivery_data_request_bookmarkreq.CreateBookmarkRequest'
       produces:
       - application/json
       responses:
@@ -445,7 +445,7 @@ paths:
         name: payload
         required: true
         schema:
-          $ref: '#/definitions/bn-mobile_server_internal_delivery_data_request_appReq.UpsertDhikrCounterRequest'
+          $ref: '#/definitions/bn-mobile_server_internal_delivery_data_request_dhikrreq.UpsertDhikrCounterRequest'
       produces:
       - application/json
       responses:
@@ -563,7 +563,7 @@ paths:
         name: payload
         required: true
         schema:
-          $ref: '#/definitions/bn-mobile_server_internal_delivery_data_request_appReq.UpsertProgressRequest'
+          $ref: '#/definitions/bn-mobile_server_internal_delivery_data_request_progressreq.UpsertProgressRequest'
       produces:
       - application/json
       responses:
@@ -665,7 +665,7 @@ paths:
         name: payload
         required: true
         schema:
-          $ref: '#/definitions/bn-mobile_server_internal_delivery_data_request_appReq.CreateQuizAttemptRequest'
+          $ref: '#/definitions/bn-mobile_server_internal_delivery_data_request_quizreq.CreateQuizAttemptRequest'
       produces:
       - application/json
       responses:
@@ -755,7 +755,7 @@ paths:
         name: payload
         required: true
         schema:
-          $ref: '#/definitions/bn-mobile_server_internal_delivery_data_request_appReq.UpdateUserRequest'
+          $ref: '#/definitions/bn-mobile_server_internal_delivery_data_request_userreq.UpdateUserRequest'
       produces:
       - application/json
       responses:

@@ -5,8 +5,8 @@ import (
 	"errors"
 	"time"
 
-	"bn-mobile/server/internal/domain/models"
-	"bn-mobile/server/internal/domain/repositories/repoInterface"
+	"github.com/awahids/bn-server/internal/domain/models"
+	"github.com/awahids/bn-server/internal/domain/repositories/repointerface"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"

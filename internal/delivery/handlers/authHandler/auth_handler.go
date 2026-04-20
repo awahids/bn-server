@@ -7,14 +7,14 @@ import (
 	"strings"
 	"time"
 
-	"bn-mobile/server/configs"
-	authreq "bn-mobile/server/internal/delivery/data/request/authReq"
-	"bn-mobile/server/internal/delivery/data/response"
-	authres "bn-mobile/server/internal/delivery/data/response/authRes"
-	"bn-mobile/server/internal/delivery/middleware"
-	"bn-mobile/server/internal/domain/models"
-	authservice "bn-mobile/server/internal/domain/services/authService"
-	"bn-mobile/server/internal/domain/services/serviceInterface"
+	"github.com/awahids/bn-server/configs"
+	authreq "github.com/awahids/bn-server/internal/delivery/data/request/authreq"
+	"github.com/awahids/bn-server/internal/delivery/data/response"
+	authres "github.com/awahids/bn-server/internal/delivery/data/response/authres"
+	"github.com/awahids/bn-server/internal/delivery/middleware"
+	"github.com/awahids/bn-server/internal/domain/models"
+	authservice "github.com/awahids/bn-server/internal/domain/services/authservice"
+	"github.com/awahids/bn-server/internal/domain/services/serviceinterface"
 
 	"github.com/gin-gonic/gin"
 )

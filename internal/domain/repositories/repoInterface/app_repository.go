@@ -3,7 +3,7 @@ package repointerface
 import (
 	"context"
 
-	"bn-mobile/server/internal/domain/models"
+	"github.com/awahids/bn-server/internal/domain/models"
 )
 
 type AppRepository interface {
@@ -16,8 +16,7 @@ type AppRepository interface {
 	UpsertProgress(ctx context.Context, progress *models.UserProgress) (*models.UserProgress, error)
 
 	GetUserBookmarks(ctx context.Context, userID string, bookmarkType *string) ([]models.Bookmark, error)
-	BookmarkExists(ctx context.Context, userID, bookmarkType, contentID string) (bool, error)
-	CreateBookmark(ctx context.Context, bookmark *models.Bookmark) error
+	CreateBookmark(ctx context.Context, bookmark *models.Bookmark) (bool, error)
 	FindBookmarkByID(ctx context.Context, bookmarkID string) (*models.Bookmark, error)
 	DeleteBookmark(ctx context.Context, bookmarkID string) error
 

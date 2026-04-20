@@ -1,4 +1,4 @@
-module bn-mobile/server
+module github.com/awahids/bn-server
 
 go 1.24.0
 
