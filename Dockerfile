@@ -12,6 +12,20 @@ RUN go mod download
 
 COPY . .
 
+RUN set -eux; \
+    fixdir() { from="$1"; to="$2"; if [ -d "$from" ] && [ ! -d "$to" ]; then mv "$from" "$to"; fi; }; \
+    fixdir internal/delivery/data/request/authReq internal/delivery/data/request/authreq; \
+    fixdir internal/delivery/data/response/authRes internal/delivery/data/response/authres; \
+    fixdir internal/delivery/handlers/authHandler internal/delivery/handlers/authhandler; \
+    fixdir internal/delivery/router/authRouter internal/delivery/router/authrouter; \
+    fixdir internal/delivery/router/publicRouter internal/delivery/router/publicrouter; \
+    fixdir internal/domain/repositories/appRepo internal/domain/repositories/apprepo; \
+    fixdir internal/domain/repositories/authRepo internal/domain/repositories/authrepo; \
+    fixdir internal/domain/repositories/repoInterface internal/domain/repositories/repointerface; \
+    fixdir internal/domain/services/appService internal/domain/services/appservice; \
+    fixdir internal/domain/services/authService internal/domain/services/authservice; \
+    fixdir internal/domain/services/serviceInterface internal/domain/services/serviceinterface
+
 RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH \
     go build -trimpath -ldflags="-s -w" -o /out/server ./cmd
 
