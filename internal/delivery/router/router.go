@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/awahids/bn-server/configs"
+	"github.com/awahids/bn-server/internal/delivery/handlers/aihandler"
 	"github.com/awahids/bn-server/internal/delivery/handlers/authhandler"
 	"github.com/awahids/bn-server/internal/delivery/handlers/bookmarkhandler"
 	"github.com/awahids/bn-server/internal/delivery/handlers/dhikrhandler"
@@ -50,6 +51,7 @@ func NewRouter(
 	dhikrHandler *dhikrhandler.DhikrHandler,
 	quizHandler *quizhandler.QuizHandler,
 	publicHandler *publichandler.PublicHandler,
+	aiHandler *aihandler.AIHandler,
 ) *gin.Engine {
 	engine := gin.New()
 	engine.Use(gin.Logger())
@@ -96,6 +98,16 @@ func NewRouter(
 	bookmarkrouter.RegisterBookmarkRoutes(apiV1, bookmarkHandler, authMiddleware)
 	dhikrrouter.RegisterDhikrRoutes(apiV1, dhikrHandler, authMiddleware)
 	quizrouter.RegisterQuizRoutes(apiV1, quizHandler, authMiddleware)
+
+	aiGroup := apiV1.Group("/ai")
+	{
+		aiGroup.POST("/coach", authMiddleware, aiHandler.GetCoachResponse)
+	}
+
+	aiGroupLegacy := apiLegacy.Group("/ai")
+	{
+		aiGroupLegacy.POST("/coach", authMiddleware, aiHandler.GetCoachResponse)
+	}
 
 	userrouter.RegisterUserRoutes(apiLegacy, userHandler, authMiddleware)
 	progressrouter.RegisterProgressRoutes(apiLegacy, progressHandler, authMiddleware)

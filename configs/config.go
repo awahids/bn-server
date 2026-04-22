@@ -20,6 +20,7 @@ type Config struct {
 	CORS        CORSConfig
 	AuthCookie  AuthCookieConfig
 	RateLimiter RateLimiterConfig
+	AI          AIConfig
 }
 
 type ServerConfig struct {
@@ -72,6 +73,12 @@ type RateLimiterConfig struct {
 	AuthLogoutLimit   int
 }
 
+type AIConfig struct {
+	APIKey  string
+	BaseURL string
+	Model   string
+}
+
 func LoadConfig() (*Config, error) {
 	_ = godotenv.Load("server/.env")
 	_ = godotenv.Load(".env")
@@ -120,6 +127,11 @@ func LoadConfig() (*Config, error) {
 			AuthGoogleLimit:   getEnvInt("AUTH_RATE_LIMIT_GOOGLE", 10),
 			AuthRefreshLimit:  getEnvInt("AUTH_RATE_LIMIT_REFRESH", 30),
 			AuthLogoutLimit:   getEnvInt("AUTH_RATE_LIMIT_LOGOUT", 30),
+		},
+		AI: AIConfig{
+			APIKey:  getEnv("AI_API_KEY", ""),
+			BaseURL: getEnv("AI_BASE_URL", "https://ai.sumopod.com/v1"),
+			Model:   getEnv("AI_MODEL", "glm-ocr"),
 		},
 	}
 

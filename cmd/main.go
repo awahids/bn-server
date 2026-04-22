@@ -23,6 +23,7 @@ import (
 
 	"github.com/awahids/bn-server/configs"
 	_ "github.com/awahids/bn-server/docs"
+	"github.com/awahids/bn-server/internal/delivery/handlers/aihandler"
 	"github.com/awahids/bn-server/internal/delivery/handlers/authhandler"
 	"github.com/awahids/bn-server/internal/delivery/handlers/bookmarkhandler"
 	"github.com/awahids/bn-server/internal/delivery/handlers/dhikrhandler"
@@ -33,6 +34,7 @@ import (
 	"github.com/awahids/bn-server/internal/delivery/router"
 	apprepo "github.com/awahids/bn-server/internal/domain/repositories/apprepo"
 	authrepo "github.com/awahids/bn-server/internal/domain/repositories/authrepo"
+	aiservice "github.com/awahids/bn-server/internal/domain/services/aiservice"
 	appservice "github.com/awahids/bn-server/internal/domain/services/appservice"
 	authservice "github.com/awahids/bn-server/internal/domain/services/authservice"
 	publicservice "github.com/awahids/bn-server/internal/domain/services/publicservice"
@@ -81,6 +83,9 @@ func main() {
 	publicService := publicservice.NewPublicService(nil)
 	publicHandler := publichandler.NewPublicHandler(publicService)
 
+	aiService := aiservice.NewAIService(cfg)
+	aiHandler := aihandler.NewAIHandler(aiService)
+
 	engine := router.NewRouter(
 		cfg,
 		authHandler,
@@ -90,15 +95,17 @@ func main() {
 		dhikrHandler,
 		quizHandler,
 		publicHandler,
+		aiHandler,
 	)
 
 	server := &http.Server{
 		Addr:              net.JoinHostPort(cfg.Server.Host, cfg.Server.Port),
 		Handler:           engine,
 		ReadHeaderTimeout: 5 * time.Second,
-		ReadTimeout:       15 * time.Second,
-		WriteTimeout:      15 * time.Second,
-		IdleTimeout:       60 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		// AI requests can take longer than standard API requests; keep write timeout above AI client timeout.
+		WriteTimeout: 60 * time.Second,
+		IdleTimeout:  60 * time.Second,
 	}
 
 	go func() {
