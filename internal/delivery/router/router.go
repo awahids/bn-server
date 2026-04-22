@@ -9,6 +9,7 @@ import (
 	"github.com/awahids/bn-server/internal/delivery/handlers/authhandler"
 	"github.com/awahids/bn-server/internal/delivery/handlers/bookmarkhandler"
 	"github.com/awahids/bn-server/internal/delivery/handlers/dhikrhandler"
+	"github.com/awahids/bn-server/internal/delivery/handlers/habithandler"
 	"github.com/awahids/bn-server/internal/delivery/handlers/progresshandler"
 	"github.com/awahids/bn-server/internal/delivery/handlers/publichandler"
 	"github.com/awahids/bn-server/internal/delivery/handlers/quizhandler"
@@ -17,6 +18,7 @@ import (
 	authrouter "github.com/awahids/bn-server/internal/delivery/router/authrouter"
 	bookmarkrouter "github.com/awahids/bn-server/internal/delivery/router/bookmarkrouter"
 	dhikrrouter "github.com/awahids/bn-server/internal/delivery/router/dhikrrouter"
+	habitrouter "github.com/awahids/bn-server/internal/delivery/router/habitrouter"
 	progressrouter "github.com/awahids/bn-server/internal/delivery/router/progressrouter"
 	publicrouter "github.com/awahids/bn-server/internal/delivery/router/publicrouter"
 	quizrouter "github.com/awahids/bn-server/internal/delivery/router/quizrouter"
@@ -49,6 +51,7 @@ func NewRouter(
 	progressHandler *progresshandler.ProgressHandler,
 	bookmarkHandler *bookmarkhandler.BookmarkHandler,
 	dhikrHandler *dhikrhandler.DhikrHandler,
+	habitHandler *habithandler.HabitHandler,
 	quizHandler *quizhandler.QuizHandler,
 	publicHandler *publichandler.PublicHandler,
 	aiHandler *aihandler.AIHandler,
@@ -97,6 +100,7 @@ func NewRouter(
 	progressrouter.RegisterProgressRoutes(apiV1, progressHandler, authMiddleware)
 	bookmarkrouter.RegisterBookmarkRoutes(apiV1, bookmarkHandler, authMiddleware)
 	dhikrrouter.RegisterDhikrRoutes(apiV1, dhikrHandler, authMiddleware)
+	habitrouter.RegisterHabitRoutes(apiV1, habitHandler, authMiddleware)
 	quizrouter.RegisterQuizRoutes(apiV1, quizHandler, authMiddleware)
 
 	aiGroup := apiV1.Group("/ai")
@@ -113,6 +117,7 @@ func NewRouter(
 	progressrouter.RegisterProgressRoutes(apiLegacy, progressHandler, authMiddleware)
 	bookmarkrouter.RegisterBookmarkRoutes(apiLegacy, bookmarkHandler, authMiddleware)
 	dhikrrouter.RegisterDhikrRoutes(apiLegacy, dhikrHandler, authMiddleware)
+	habitrouter.RegisterHabitRoutes(apiLegacy, habitHandler, authMiddleware)
 	quizrouter.RegisterQuizRoutes(apiLegacy, quizHandler, authMiddleware)
 
 	return engine

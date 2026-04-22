@@ -24,6 +24,26 @@ type UpsertProgressInput struct {
 	TimeSpent int
 }
 
+type CreateHabitInput struct {
+	Name            string
+	Category        string
+	ReminderTime    string
+	ReminderEnabled bool
+}
+
+type UpdateHabitInput struct {
+	Name            *string
+	Category        *string
+	ReminderTime    *string
+	ReminderEnabled *bool
+}
+
+type SetHabitCompletionInput struct {
+	HabitID   string
+	Date      string
+	Completed bool
+}
+
 type CreateBookmarkInput struct {
 	Type      string
 	ContentID string
@@ -106,7 +126,6 @@ type WeeklyActivityItem struct {
 	Completed bool   `json:"completed"`
 }
 
-
 type AppService interface {
 	GetUserProfile(ctx context.Context, userID string) (*models.User, error)
 	UpdateUserProfile(ctx context.Context, userID string, input UpdateUserInput) (*models.User, error)
@@ -114,6 +133,13 @@ type AppService interface {
 	GetProgress(ctx context.Context, userID string, module *string) ([]models.UserProgress, error)
 	GetProgressItem(ctx context.Context, userID, module, itemID string) (*models.UserProgress, error)
 	UpsertProgress(ctx context.Context, userID string, input UpsertProgressInput) (*models.UserProgress, error)
+
+	GetHabits(ctx context.Context, userID string) ([]models.Habit, error)
+	GetHabitCompletions(ctx context.Context, userID string) ([]models.HabitCompletion, error)
+	CreateHabit(ctx context.Context, userID string, input CreateHabitInput) (*models.Habit, error)
+	UpdateHabit(ctx context.Context, userID, habitID string, input UpdateHabitInput) (*models.Habit, error)
+	DeleteHabit(ctx context.Context, userID, habitID string) error
+	SetHabitCompletion(ctx context.Context, userID string, input SetHabitCompletionInput) (*models.HabitCompletion, error)
 
 	GetBookmarks(ctx context.Context, userID string, bookmarkType *string) ([]models.Bookmark, error)
 	CreateBookmark(ctx context.Context, userID string, input CreateBookmarkInput) (*models.Bookmark, error)
@@ -131,4 +157,3 @@ type AppService interface {
 	GetAchievements(ctx context.Context, userID string) ([]AchievementItem, error)
 	GetWeeklyActivity(ctx context.Context, userID string) ([]WeeklyActivityItem, error)
 }
-

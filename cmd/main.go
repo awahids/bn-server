@@ -27,6 +27,7 @@ import (
 	"github.com/awahids/bn-server/internal/delivery/handlers/authhandler"
 	"github.com/awahids/bn-server/internal/delivery/handlers/bookmarkhandler"
 	"github.com/awahids/bn-server/internal/delivery/handlers/dhikrhandler"
+	"github.com/awahids/bn-server/internal/delivery/handlers/habithandler"
 	"github.com/awahids/bn-server/internal/delivery/handlers/progresshandler"
 	"github.com/awahids/bn-server/internal/delivery/handlers/publichandler"
 	"github.com/awahids/bn-server/internal/delivery/handlers/quizhandler"
@@ -78,6 +79,7 @@ func main() {
 	progressHandler := progresshandler.NewProgressHandler(appService)
 	bookmarkHandler := bookmarkhandler.NewBookmarkHandler(appService)
 	dhikrHandler := dhikrhandler.NewDhikrHandler(appService)
+	habitHandler := habithandler.NewHabitHandler(appService)
 	quizHandler := quizhandler.NewQuizHandler(appService)
 
 	publicService := publicservice.NewPublicService(nil)
@@ -93,6 +95,7 @@ func main() {
 		progressHandler,
 		bookmarkHandler,
 		dhikrHandler,
+		habitHandler,
 		quizHandler,
 		publicHandler,
 		aiHandler,

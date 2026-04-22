@@ -19,6 +19,8 @@ import (
 var (
 	ErrUserNotFound      = errors.New("user not found")
 	ErrUsernameTaken     = errors.New("username already taken")
+	ErrHabitNotFound     = errors.New("habit not found")
+	ErrHabitInvalidData  = errors.New("invalid habit data")
 	ErrBookmarkExists    = errors.New("bookmark already exists for this content")
 	ErrBookmarkNotFound  = errors.New("bookmark not found")
 	ErrBookmarkForbidden = errors.New("forbidden: you can only delete your own bookmarks")
@@ -109,6 +111,111 @@ func (s *appService) UpsertProgress(ctx context.Context, userID string, input se
 		LastAccessed: time.Now(),
 	}
 	return s.repo.UpsertProgress(ctx, progress)
+}
+
+func (s *appService) GetHabits(ctx context.Context, userID string) ([]models.Habit, error) {
+	return s.repo.GetUserHabits(ctx, userID)
+}
+
+func (s *appService) GetHabitCompletions(ctx context.Context, userID string) ([]models.HabitCompletion, error) {
+	return s.repo.GetUserHabitCompletions(ctx, userID)
+}
+
+func (s *appService) CreateHabit(ctx context.Context, userID string, input serviceinterface.CreateHabitInput) (*models.Habit, error) {
+	if input.ReminderEnabled && strings.TrimSpace(input.ReminderTime) == "" {
+		return nil, ErrHabitInvalidData
+	}
+
+	habit := &models.Habit{
+		UserID:          userID,
+		Name:            input.Name,
+		Category:        input.Category,
+		ReminderTime:    input.ReminderTime,
+		ReminderEnabled: input.ReminderEnabled,
+	}
+	if err := s.repo.CreateHabit(ctx, habit); err != nil {
+		return nil, err
+	}
+	return habit, nil
+}
+
+func (s *appService) UpdateHabit(ctx context.Context, userID, habitID string, input serviceinterface.UpdateHabitInput) (*models.Habit, error) {
+	habit, err := s.repo.FindHabitByID(ctx, userID, habitID)
+	if err != nil {
+		return nil, err
+	}
+	if habit == nil {
+		return nil, ErrHabitNotFound
+	}
+
+	if input.Name != nil {
+		habit.Name = strings.TrimSpace(*input.Name)
+	}
+	if input.Category != nil {
+		habit.Category = strings.TrimSpace(*input.Category)
+	}
+	if input.ReminderTime != nil {
+		habit.ReminderTime = strings.TrimSpace(*input.ReminderTime)
+	}
+	if input.ReminderEnabled != nil {
+		habit.ReminderEnabled = *input.ReminderEnabled
+	}
+
+	if !habit.ReminderEnabled {
+		habit.ReminderTime = ""
+	}
+	if habit.ReminderEnabled && strings.TrimSpace(habit.ReminderTime) == "" {
+		return nil, ErrHabitInvalidData
+	}
+
+	if err := s.repo.UpdateHabit(ctx, habit); err != nil {
+		return nil, err
+	}
+	return habit, nil
+}
+
+func (s *appService) DeleteHabit(ctx context.Context, userID, habitID string) error {
+	habit, err := s.repo.FindHabitByID(ctx, userID, habitID)
+	if err != nil {
+		return err
+	}
+	if habit == nil {
+		return ErrHabitNotFound
+	}
+
+	if err := s.repo.DeleteHabit(ctx, userID, habitID); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrHabitNotFound
+		}
+		return err
+	}
+	return nil
+}
+
+func (s *appService) SetHabitCompletion(ctx context.Context, userID string, input serviceinterface.SetHabitCompletionInput) (*models.HabitCompletion, error) {
+	habit, err := s.repo.FindHabitByID(ctx, userID, input.HabitID)
+	if err != nil {
+		return nil, err
+	}
+	if habit == nil {
+		return nil, ErrHabitNotFound
+	}
+
+	if !input.Completed {
+		if err := s.repo.DeleteHabitCompletion(ctx, userID, input.HabitID, input.Date); err != nil {
+			return nil, err
+		}
+		return nil, nil
+	}
+
+	completion := &models.HabitCompletion{
+		UserID:    userID,
+		HabitID:   input.HabitID,
+		Date:      input.Date,
+		Completed: true,
+	}
+
+	return s.repo.UpsertHabitCompletion(ctx, completion)
 }
 
 func (s *appService) GetBookmarks(ctx context.Context, userID string, bookmarkType *string) ([]models.Bookmark, error) {
@@ -379,7 +486,7 @@ func (s *appService) GetAchievements(ctx context.Context, userID string) ([]serv
 	}
 	progress, _ := s.repo.GetUserProgress(ctx, userID, nil)
 	quizStats, _ := s.GetQuizStats(ctx, userID)
-	
+
 	hijaiyahCompleted := 0
 	for _, p := range progress {
 		if p.Module == "hijaiyah" && p.Completed {
@@ -440,14 +547,14 @@ func (s *appService) GetAchievements(ctx context.Context, userID string) ([]serv
 func (s *appService) GetWeeklyActivity(ctx context.Context, userID string) ([]serviceinterface.WeeklyActivityItem, error) {
 	now := time.Now()
 	activity := make([]serviceinterface.WeeklyActivityItem, 7)
-	
+
 	// We'll approximate active dates by grabbing progress, quiz, and dhikr history
 	// In a real app we'd query an activity_log table.
 	// We will just do a simple aggregation: if there's any progress last accessed on the day, it's a hit.
-	
+
 	progress, _ := s.repo.GetUserProgress(ctx, userID, nil)
 	quizzes, _ := s.repo.GetUserQuizAttempts(ctx, userID, nil)
-	
+
 	activeDates := make(map[string]bool)
 	for _, p := range progress {
 		activeDates[p.LastAccessed.Format("2006-01-02")] = true
@@ -458,11 +565,11 @@ func (s *appService) GetWeeklyActivity(ctx context.Context, userID string) ([]se
 
 	// Calculate last 7 days ending today
 	dayNames := []string{"Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"}
-	
+
 	for i := 6; i >= 0; i-- {
 		targetDate := now.AddDate(0, 0, i-6)
 		dateStr := targetDate.Format("2006-01-02")
-		
+
 		// Check Dhikr for that date
 		hasDhikr := false
 		if dhikrCounters, err := s.repo.GetDhikrCountersForDate(ctx, userID, dateStr); err == nil && len(dhikrCounters) > 0 {
@@ -473,14 +580,13 @@ func (s *appService) GetWeeklyActivity(ctx context.Context, userID string) ([]se
 				}
 			}
 		}
-		
+
 		isActive := activeDates[dateStr] || hasDhikr
 		activity[i] = serviceinterface.WeeklyActivityItem{
 			Day:       dayNames[targetDate.Weekday()],
 			Completed: isActive,
 		}
 	}
-	
+
 	return activity, nil
 }
-

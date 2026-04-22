@@ -15,6 +15,15 @@ type AppRepository interface {
 	GetProgressByItem(ctx context.Context, userID, module, itemID string) (*models.UserProgress, error)
 	UpsertProgress(ctx context.Context, progress *models.UserProgress) (*models.UserProgress, error)
 
+	GetUserHabits(ctx context.Context, userID string) ([]models.Habit, error)
+	GetUserHabitCompletions(ctx context.Context, userID string) ([]models.HabitCompletion, error)
+	FindHabitByID(ctx context.Context, userID, habitID string) (*models.Habit, error)
+	CreateHabit(ctx context.Context, habit *models.Habit) error
+	UpdateHabit(ctx context.Context, habit *models.Habit) error
+	DeleteHabit(ctx context.Context, userID, habitID string) error
+	UpsertHabitCompletion(ctx context.Context, completion *models.HabitCompletion) (*models.HabitCompletion, error)
+	DeleteHabitCompletion(ctx context.Context, userID, habitID, date string) error
+
 	GetUserBookmarks(ctx context.Context, userID string, bookmarkType *string) ([]models.Bookmark, error)
 	CreateBookmark(ctx context.Context, bookmark *models.Bookmark) (bool, error)
 	FindBookmarkByID(ctx context.Context, bookmarkID string) (*models.Bookmark, error)

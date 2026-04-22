@@ -39,6 +39,38 @@ func (m *mockAppRepo) UpsertProgress(context.Context, *models.UserProgress) (*mo
 	return nil, nil
 }
 
+func (m *mockAppRepo) GetUserHabits(context.Context, string) ([]models.Habit, error) {
+	return nil, nil
+}
+
+func (m *mockAppRepo) GetUserHabitCompletions(context.Context, string) ([]models.HabitCompletion, error) {
+	return nil, nil
+}
+
+func (m *mockAppRepo) FindHabitByID(context.Context, string, string) (*models.Habit, error) {
+	return nil, nil
+}
+
+func (m *mockAppRepo) CreateHabit(context.Context, *models.Habit) error {
+	return nil
+}
+
+func (m *mockAppRepo) UpdateHabit(context.Context, *models.Habit) error {
+	return nil
+}
+
+func (m *mockAppRepo) DeleteHabit(context.Context, string, string) error {
+	return nil
+}
+
+func (m *mockAppRepo) UpsertHabitCompletion(context.Context, *models.HabitCompletion) (*models.HabitCompletion, error) {
+	return nil, nil
+}
+
+func (m *mockAppRepo) DeleteHabitCompletion(context.Context, string, string, string) error {
+	return nil
+}
+
 func (m *mockAppRepo) GetUserBookmarks(context.Context, string, *string) ([]models.Bookmark, error) {
 	return nil, nil
 }

@@ -25,6 +25,8 @@ func (r *appRepository) FindUserByID(ctx context.Context, userID string) (*model
 	err := r.db.WithContext(ctx).
 		Preload("Progress").
 		Preload("Bookmarks").
+		Preload("Habits").
+		Preload("HabitLogs").
 		Preload("DhikrCounters").
 		Preload("QuizAttempts").
 		Where("id = ?", userID).
@@ -109,6 +111,94 @@ func (r *appRepository) UpsertProgress(ctx context.Context, progress *models.Use
 		return nil, err
 	}
 	return progress, nil
+}
+
+func (r *appRepository) GetUserHabits(ctx context.Context, userID string) ([]models.Habit, error) {
+	var habits []models.Habit
+	err := r.db.WithContext(ctx).
+		Where("user_id = ?", userID).
+		Order("created_at ASC").
+		Find(&habits).Error
+	if err != nil {
+		return nil, err
+	}
+	return habits, nil
+}
+
+func (r *appRepository) GetUserHabitCompletions(ctx context.Context, userID string) ([]models.HabitCompletion, error) {
+	var completions []models.HabitCompletion
+	err := r.db.WithContext(ctx).
+		Where("user_id = ? AND completed = ?", userID, true).
+		Order("date ASC, created_at ASC").
+		Find(&completions).Error
+	if err != nil {
+		return nil, err
+	}
+	return completions, nil
+}
+
+func (r *appRepository) FindHabitByID(ctx context.Context, userID, habitID string) (*models.Habit, error) {
+	var habit models.Habit
+	err := r.db.WithContext(ctx).
+		Where("id = ? AND user_id = ?", habitID, userID).
+		First(&habit).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &habit, nil
+}
+
+func (r *appRepository) CreateHabit(ctx context.Context, habit *models.Habit) error {
+	return r.db.WithContext(ctx).Create(habit).Error
+}
+
+func (r *appRepository) UpdateHabit(ctx context.Context, habit *models.Habit) error {
+	return r.db.WithContext(ctx).Save(habit).Error
+}
+
+func (r *appRepository) DeleteHabit(ctx context.Context, userID, habitID string) error {
+	result := r.db.WithContext(ctx).
+		Where("id = ? AND user_id = ?", habitID, userID).
+		Delete(&models.Habit{})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
+}
+
+func (r *appRepository) UpsertHabitCompletion(ctx context.Context, completion *models.HabitCompletion) (*models.HabitCompletion, error) {
+	if err := r.db.WithContext(ctx).
+		Clauses(
+			clause.OnConflict{
+				Columns: []clause.Column{
+					{Name: "user_id"},
+					{Name: "habit_id"},
+					{Name: "date"},
+				},
+				DoUpdates: clause.Assignments(map[string]any{
+					"completed":  completion.Completed,
+					"updated_at": time.Now(),
+					"deleted_at": nil,
+				}),
+			},
+			clause.Returning{},
+		).
+		Create(completion).Error; err != nil {
+		return nil, err
+	}
+	return completion, nil
+}
+
+func (r *appRepository) DeleteHabitCompletion(ctx context.Context, userID, habitID, date string) error {
+	return r.db.WithContext(ctx).
+		Where("user_id = ? AND habit_id = ? AND date = ?", userID, habitID, date).
+		Delete(&models.HabitCompletion{}).Error
 }
 
 func (r *appRepository) GetUserBookmarks(ctx context.Context, userID string, bookmarkType *string) ([]models.Bookmark, error) {
