@@ -24,6 +24,15 @@ type AppRepository interface {
 	UpsertHabitCompletion(ctx context.Context, completion *models.HabitCompletion) (*models.HabitCompletion, error)
 	DeleteHabitCompletion(ctx context.Context, userID, habitID, date string) error
 
+	UpsertPushSubscription(ctx context.Context, subscription *models.PushSubscription) error
+	DeletePushSubscriptionByUserEndpoint(ctx context.Context, userID, endpoint string) error
+	DeletePushSubscriptionByEndpoint(ctx context.Context, endpoint string) error
+	GetActivePushTimezones(ctx context.Context) ([]string, error)
+	GetDuePushReminderTargets(ctx context.Context, timezone, reminderTime, date string) ([]models.PushReminderTarget, error)
+
+	GetSchools(ctx context.Context) ([]models.School, error)
+	CreateSchool(ctx context.Context, school *models.School) error
+
 	GetUserBookmarks(ctx context.Context, userID string, bookmarkType *string) ([]models.Bookmark, error)
 	CreateBookmark(ctx context.Context, bookmark *models.Bookmark) (bool, error)
 	FindBookmarkByID(ctx context.Context, bookmarkID string) (*models.Bookmark, error)

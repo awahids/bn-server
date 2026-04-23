@@ -47,11 +47,23 @@ server/
 - `GET /api/v1/bookmarks` (Bearer token required)
 - `POST /api/v1/bookmarks` (Bearer token required)
 - `DELETE /api/v1/bookmarks/:id` (Bearer token required)
+- `GET /api/v1/dhikrs` (Public)
 - `GET /api/v1/dhikr/counters` (Bearer token required)
 - `POST /api/v1/dhikr/counters` (Bearer token required)
+- `GET /api/v1/habits` (Bearer token required)
+- `POST /api/v1/habits` (Bearer token required)
+- `PATCH /api/v1/habits/:id` (Bearer token required)
+- `DELETE /api/v1/habits/:id` (Bearer token required)
+- `POST /api/v1/habits/completions` (Bearer token required)
+- `GET /api/v1/push/public-key` (Public)
+- `POST /api/v1/push/subscriptions` (Bearer token required)
+- `DELETE /api/v1/push/subscriptions` (Bearer token required)
+- `GET /api/v1/schools` (Public)
+- `POST /api/v1/schools` (Bearer token required)
 - `GET /api/v1/quiz/attempts` (Bearer token required)
 - `POST /api/v1/quiz/attempts` (Bearer token required)
 - `GET /api/v1/quiz/stats` (Bearer token required)
+- `POST /api/v1/ai/coach` (Bearer token required)
 - `GET /api/v1/audio-proxy`
 - `GET /api/v1/prayer-times`
 
@@ -84,6 +96,70 @@ go mod tidy
 go run ./cmd/migrate -action up
 go run ./cmd
 ```
+
+## Database Migration
+
+CLI migration ada di `cmd/migrate` dan memakai `golang-migrate`.
+
+Jalankan dari folder `server`:
+
+```bash
+cd server
+```
+
+Command utama:
+
+```bash
+# cek versi migration saat ini
+go run ./cmd/migrate -action version
+
+# apply semua migration baru
+go run ./cmd/migrate -action up
+
+# rollback semua migration
+go run ./cmd/migrate -action down
+
+# apply/rollback beberapa step
+go run ./cmd/migrate -action steps -steps 1
+go run ./cmd/migrate -action steps -steps -1
+
+# force versi jika state dirty
+go run ./cmd/migrate -action force -force 5
+```
+
+Troubleshooting cepat:
+
+- Jika muncul error `relation "<table>" does not exist`, jalankan:
+  - `go run ./cmd/migrate -action up`
+- Jika muncul `dirty migration state`:
+  - `go run ./cmd/migrate -action force -force <version>`
+  - lalu ulang `go run ./cmd/migrate -action up`
+
+## Web Push Reminder (Habit)
+
+Fitur push reminder berjalan jika konfigurasi VAPID diaktifkan.
+
+Tambahkan env di `server/.env`:
+
+```bash
+PUSH_ENABLED=true
+PUSH_VAPID_PUBLIC_KEY=<public-key>
+PUSH_VAPID_PRIVATE_KEY=<private-key>
+PUSH_VAPID_SUBJECT=mailto:admin@example.com
+PUSH_DISPATCH_INTERVAL=1m
+```
+
+Generate VAPID key (contoh):
+
+```bash
+npx web-push generate-vapid-keys
+```
+
+Catatan:
+
+- Scheduler push berjalan di proses backend yang sama (`cmd/main.go`), interval default `1m`.
+- Subscription disimpan di tabel `push_subscriptions` (migration `000007`).
+- Client perlu register service worker `public/sw.js` dan grant permission notifikasi.
 
 ## Request Examples
 

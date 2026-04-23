@@ -12,7 +12,9 @@ import (
 	"github.com/awahids/bn-server/internal/delivery/handlers/habithandler"
 	"github.com/awahids/bn-server/internal/delivery/handlers/progresshandler"
 	"github.com/awahids/bn-server/internal/delivery/handlers/publichandler"
+	"github.com/awahids/bn-server/internal/delivery/handlers/pushhandler"
 	"github.com/awahids/bn-server/internal/delivery/handlers/quizhandler"
+	"github.com/awahids/bn-server/internal/delivery/handlers/schoolhandler"
 	"github.com/awahids/bn-server/internal/delivery/handlers/userhandler"
 	"github.com/awahids/bn-server/internal/delivery/middleware"
 	authrouter "github.com/awahids/bn-server/internal/delivery/router/authrouter"
@@ -21,7 +23,9 @@ import (
 	habitrouter "github.com/awahids/bn-server/internal/delivery/router/habitrouter"
 	progressrouter "github.com/awahids/bn-server/internal/delivery/router/progressrouter"
 	publicrouter "github.com/awahids/bn-server/internal/delivery/router/publicrouter"
+	pushrouter "github.com/awahids/bn-server/internal/delivery/router/pushrouter"
 	quizrouter "github.com/awahids/bn-server/internal/delivery/router/quizrouter"
+	schoolrouter "github.com/awahids/bn-server/internal/delivery/router/schoolrouter"
 	userrouter "github.com/awahids/bn-server/internal/delivery/router/userrouter"
 
 	"github.com/gin-contrib/cors"
@@ -52,6 +56,8 @@ func NewRouter(
 	bookmarkHandler *bookmarkhandler.BookmarkHandler,
 	dhikrHandler *dhikrhandler.DhikrHandler,
 	habitHandler *habithandler.HabitHandler,
+	pushHandler *pushhandler.PushHandler,
+	schoolHandler *schoolhandler.SchoolHandler,
 	quizHandler *quizhandler.QuizHandler,
 	publicHandler *publichandler.PublicHandler,
 	aiHandler *aihandler.AIHandler,
@@ -101,6 +107,8 @@ func NewRouter(
 	bookmarkrouter.RegisterBookmarkRoutes(apiV1, bookmarkHandler, authMiddleware)
 	dhikrrouter.RegisterDhikrRoutes(apiV1, dhikrHandler, authMiddleware)
 	habitrouter.RegisterHabitRoutes(apiV1, habitHandler, authMiddleware)
+	pushrouter.RegisterPushRoutes(apiV1, pushHandler, authMiddleware)
+	schoolrouter.RegisterSchoolRoutes(apiV1, schoolHandler, authMiddleware)
 	quizrouter.RegisterQuizRoutes(apiV1, quizHandler, authMiddleware)
 
 	aiGroup := apiV1.Group("/ai")
@@ -118,6 +126,8 @@ func NewRouter(
 	bookmarkrouter.RegisterBookmarkRoutes(apiLegacy, bookmarkHandler, authMiddleware)
 	dhikrrouter.RegisterDhikrRoutes(apiLegacy, dhikrHandler, authMiddleware)
 	habitrouter.RegisterHabitRoutes(apiLegacy, habitHandler, authMiddleware)
+	pushrouter.RegisterPushRoutes(apiLegacy, pushHandler, authMiddleware)
+	schoolrouter.RegisterSchoolRoutes(apiLegacy, schoolHandler, authMiddleware)
 	quizrouter.RegisterQuizRoutes(apiLegacy, quizHandler, authMiddleware)
 
 	return engine

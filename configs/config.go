@@ -21,6 +21,7 @@ type Config struct {
 	AuthCookie  AuthCookieConfig
 	RateLimiter RateLimiterConfig
 	AI          AIConfig
+	Push        PushConfig
 }
 
 type ServerConfig struct {
@@ -79,6 +80,14 @@ type AIConfig struct {
 	Model   string
 }
 
+type PushConfig struct {
+	Enabled          bool
+	VAPIDPublicKey   string
+	VAPIDPrivateKey  string
+	VAPIDSubject     string
+	DispatchInterval time.Duration
+}
+
 func LoadConfig() (*Config, error) {
 	_ = godotenv.Load("server/.env")
 	_ = godotenv.Load(".env")
@@ -133,6 +142,13 @@ func LoadConfig() (*Config, error) {
 			BaseURL: getEnv("AI_BASE_URL", "https://ai.sumopod.com/v1"),
 			Model:   getEnv("AI_MODEL", "glm-ocr"),
 		},
+		Push: PushConfig{
+			Enabled:          getEnvBool("PUSH_ENABLED", false),
+			VAPIDPublicKey:   getEnv("PUSH_VAPID_PUBLIC_KEY", ""),
+			VAPIDPrivateKey:  getEnv("PUSH_VAPID_PRIVATE_KEY", ""),
+			VAPIDSubject:     getEnv("PUSH_VAPID_SUBJECT", "mailto:admin@example.com"),
+			DispatchInterval: getEnvDuration("PUSH_DISPATCH_INTERVAL", time.Minute),
+		},
 	}
 
 	if cfg.JWT.Secret == "" {
@@ -144,6 +160,15 @@ func LoadConfig() (*Config, error) {
 	}
 	if cfg.AppEnv == "production" && cfg.Google.ClientSecret == "" {
 		return nil, fmt.Errorf("GOOGLE_CLIENT_SECRET is required in production")
+	}
+
+	if cfg.Push.Enabled {
+		if strings.TrimSpace(cfg.Push.VAPIDPublicKey) == "" || strings.TrimSpace(cfg.Push.VAPIDPrivateKey) == "" {
+			return nil, fmt.Errorf("PUSH_VAPID_PUBLIC_KEY and PUSH_VAPID_PRIVATE_KEY are required when PUSH_ENABLED=true")
+		}
+		if cfg.Push.DispatchInterval < 10*time.Second {
+			return nil, fmt.Errorf("PUSH_DISPATCH_INTERVAL must be at least 10s")
+		}
 	}
 
 	return cfg, nil

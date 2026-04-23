@@ -21,11 +21,25 @@ var (
 	ErrUsernameTaken     = errors.New("username already taken")
 	ErrHabitNotFound     = errors.New("habit not found")
 	ErrHabitInvalidData  = errors.New("invalid habit data")
+	ErrPushInvalidData   = errors.New("invalid push subscription data")
+	ErrSchoolInvalidData = errors.New("invalid school data")
 	ErrBookmarkExists    = errors.New("bookmark already exists for this content")
 	ErrBookmarkNotFound  = errors.New("bookmark not found")
 	ErrBookmarkForbidden = errors.New("forbidden: you can only delete your own bookmarks")
 	ErrScoreMismatch     = errors.New("score does not match the provided answers")
 )
+
+var schoolJenjangAliases = map[string]string{
+	"tk":      "TK",
+	"sd":      "SD",
+	"smp":     "SMP",
+	"sma":     "SMA",
+	"smk":     "SMK",
+	"mi":      "MI",
+	"mts":     "MTs",
+	"ma":      "MA",
+	"lainnya": "Lainnya",
+}
 
 type appService struct {
 	repo repointerface.AppRepository
@@ -216,6 +230,120 @@ func (s *appService) SetHabitCompletion(ctx context.Context, userID string, inpu
 	}
 
 	return s.repo.UpsertHabitCompletion(ctx, completion)
+}
+
+func (s *appService) UpsertPushSubscription(ctx context.Context, userID string, input serviceinterface.UpsertPushSubscriptionInput) error {
+	endpoint := strings.TrimSpace(input.Endpoint)
+	p256dh := strings.TrimSpace(input.Keys.P256DH)
+	auth := strings.TrimSpace(input.Keys.Auth)
+	timezone := normalizeTimeZone(input.Timezone)
+
+	if endpoint == "" || p256dh == "" || auth == "" {
+		return ErrPushInvalidData
+	}
+	if len(endpoint) > 2048 || len(p256dh) > 512 || len(auth) > 255 {
+		return ErrPushInvalidData
+	}
+
+	subscription := &models.PushSubscription{
+		UserID:         userID,
+		Endpoint:       endpoint,
+		P256DH:         p256dh,
+		Auth:           auth,
+		ExpirationTime: input.ExpirationTime,
+		Timezone:       timezone,
+		Enabled:        true,
+		LastSeenAt:     time.Now(),
+	}
+
+	return s.repo.UpsertPushSubscription(ctx, subscription)
+}
+
+func (s *appService) DeletePushSubscription(ctx context.Context, userID, endpoint string) error {
+	trimmedEndpoint := strings.TrimSpace(endpoint)
+	if trimmedEndpoint == "" {
+		return ErrPushInvalidData
+	}
+	if err := s.repo.DeletePushSubscriptionByUserEndpoint(ctx, userID, trimmedEndpoint); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil
+		}
+		return err
+	}
+	return nil
+}
+
+func (s *appService) GetSchools(ctx context.Context) ([]models.School, error) {
+	return s.repo.GetSchools(ctx)
+}
+
+func (s *appService) CreateSchool(ctx context.Context, userID string, input serviceinterface.CreateSchoolInput) (*models.School, error) {
+	name := strings.TrimSpace(input.Name)
+	location := strings.TrimSpace(input.Location)
+	jenjang, jenjangOK := normalizeSchoolJenjang(input.Jenjang)
+	statusSekolah, statusSekolahOK := normalizeSchoolStatusSekolah(input.StatusSekolah)
+	mapURL := strings.TrimSpace(input.MapURL)
+	contact := ""
+	description := ""
+
+	if input.Contact != nil {
+		contact = strings.TrimSpace(*input.Contact)
+	}
+	if input.Description != nil {
+		description = strings.TrimSpace(*input.Description)
+	}
+
+	if name == "" || location == "" || mapURL == "" || input.MonthlyFee < 0 || !jenjangOK || !statusSekolahOK {
+		return nil, ErrSchoolInvalidData
+	}
+
+	if len(contact) > 100 || len(description) > 1000 {
+		return nil, ErrSchoolInvalidData
+	}
+
+	school := &models.School{
+		UserID:        userID,
+		Name:          name,
+		Location:      location,
+		Jenjang:       jenjang,
+		StatusSekolah: statusSekolah,
+		MonthlyFee:    input.MonthlyFee,
+		MapURL:        mapURL,
+		Contact:       contact,
+		Description:   description,
+	}
+
+	if err := s.repo.CreateSchool(ctx, school); err != nil {
+		return nil, err
+	}
+	return school, nil
+}
+
+func normalizeSchoolJenjang(value string) (string, bool) {
+	key := strings.ToLower(strings.TrimSpace(value))
+	normalized, ok := schoolJenjangAliases[key]
+	return normalized, ok
+}
+
+func normalizeSchoolStatusSekolah(value string) (string, bool) {
+	status := strings.ToLower(strings.TrimSpace(value))
+	switch status {
+	case "negeri", "swasta":
+		return status, true
+	default:
+		return "", false
+	}
+}
+
+func normalizeTimeZone(value string) string {
+	timezone := strings.TrimSpace(value)
+	if timezone == "" {
+		return "UTC"
+	}
+	if _, err := time.LoadLocation(timezone); err != nil {
+		return "UTC"
+	}
+	return timezone
 }
 
 func (s *appService) GetBookmarks(ctx context.Context, userID string, bookmarkType *string) ([]models.Bookmark, error) {

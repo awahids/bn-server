@@ -44,6 +44,29 @@ type SetHabitCompletionInput struct {
 	Completed bool
 }
 
+type PushSubscriptionKeysInput struct {
+	P256DH string
+	Auth   string
+}
+
+type UpsertPushSubscriptionInput struct {
+	Endpoint       string
+	Keys           PushSubscriptionKeysInput
+	ExpirationTime *int64
+	Timezone       string
+}
+
+type CreateSchoolInput struct {
+	Name          string
+	Location      string
+	Jenjang       string
+	StatusSekolah string
+	MonthlyFee    int
+	MapURL        string
+	Contact       *string
+	Description   *string
+}
+
 type CreateBookmarkInput struct {
 	Type      string
 	ContentID string
@@ -140,6 +163,11 @@ type AppService interface {
 	UpdateHabit(ctx context.Context, userID, habitID string, input UpdateHabitInput) (*models.Habit, error)
 	DeleteHabit(ctx context.Context, userID, habitID string) error
 	SetHabitCompletion(ctx context.Context, userID string, input SetHabitCompletionInput) (*models.HabitCompletion, error)
+	UpsertPushSubscription(ctx context.Context, userID string, input UpsertPushSubscriptionInput) error
+	DeletePushSubscription(ctx context.Context, userID, endpoint string) error
+
+	GetSchools(ctx context.Context) ([]models.School, error)
+	CreateSchool(ctx context.Context, userID string, input CreateSchoolInput) (*models.School, error)
 
 	GetBookmarks(ctx context.Context, userID string, bookmarkType *string) ([]models.Bookmark, error)
 	CreateBookmark(ctx context.Context, userID string, input CreateBookmarkInput) (*models.Bookmark, error)

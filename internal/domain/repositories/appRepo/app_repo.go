@@ -201,6 +201,104 @@ func (r *appRepository) DeleteHabitCompletion(ctx context.Context, userID, habit
 		Delete(&models.HabitCompletion{}).Error
 }
 
+func (r *appRepository) UpsertPushSubscription(ctx context.Context, subscription *models.PushSubscription) error {
+	subscription.LastSeenAt = time.Now()
+	return r.db.WithContext(ctx).
+		Clauses(
+			clause.OnConflict{
+				Columns: []clause.Column{
+					{Name: "endpoint"},
+				},
+				DoUpdates: clause.Assignments(map[string]any{
+					"user_id":         subscription.UserID,
+					"p256dh":          subscription.P256DH,
+					"auth":            subscription.Auth,
+					"expiration_time": subscription.ExpirationTime,
+					"timezone":        subscription.Timezone,
+					"enabled":         true,
+					"last_seen_at":    subscription.LastSeenAt,
+					"updated_at":      time.Now(),
+					"deleted_at":      nil,
+				}),
+			},
+		).
+		Create(subscription).Error
+}
+
+func (r *appRepository) DeletePushSubscriptionByUserEndpoint(ctx context.Context, userID, endpoint string) error {
+	result := r.db.WithContext(ctx).
+		Where("user_id = ? AND endpoint = ?", userID, endpoint).
+		Delete(&models.PushSubscription{})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
+}
+
+func (r *appRepository) DeletePushSubscriptionByEndpoint(ctx context.Context, endpoint string) error {
+	return r.db.WithContext(ctx).
+		Where("endpoint = ?", endpoint).
+		Delete(&models.PushSubscription{}).Error
+}
+
+func (r *appRepository) GetActivePushTimezones(ctx context.Context) ([]string, error) {
+	var timezones []string
+	err := r.db.WithContext(ctx).
+		Model(&models.PushSubscription{}).
+		Where("enabled = ? AND deleted_at IS NULL", true).
+		Distinct("timezone").
+		Pluck("timezone", &timezones).Error
+	if err != nil {
+		return nil, err
+	}
+	return timezones, nil
+}
+
+func (r *appRepository) GetDuePushReminderTargets(ctx context.Context, timezone, reminderTime, date string) ([]models.PushReminderTarget, error) {
+	var targets []models.PushReminderTarget
+	err := r.db.WithContext(ctx).
+		Table("habits AS h").
+		Select(
+			"ps.id AS subscription_id, ps.endpoint, ps.p256dh, ps.auth, ps.timezone, "+
+				"h.user_id, h.id AS habit_id, h.name AS habit_name, h.reminder_time",
+		).
+		Joins("JOIN push_subscriptions ps ON ps.user_id = h.user_id").
+		Joins(
+			"LEFT JOIN habit_completions hc ON hc.user_id = h.user_id AND hc.habit_id = h.id AND hc.date = ? AND hc.completed = ? AND hc.deleted_at IS NULL",
+			date,
+			true,
+		).
+		Where("h.reminder_enabled = ? AND h.reminder_time = ? AND h.deleted_at IS NULL", true, reminderTime).
+		Where("ps.enabled = ? AND ps.timezone = ? AND ps.deleted_at IS NULL", true, timezone).
+		Where("hc.id IS NULL").
+		Scan(&targets).Error
+	if err != nil {
+		return nil, err
+	}
+	return targets, nil
+}
+
+func (r *appRepository) GetSchools(ctx context.Context) ([]models.School, error) {
+	var schools []models.School
+	err := r.db.WithContext(ctx).
+		Preload("User", func(db *gorm.DB) *gorm.DB {
+			return db.Select("id", "name", "username")
+		}).
+		Order("created_at DESC").
+		Find(&schools).Error
+	if err != nil {
+		return nil, err
+	}
+	return schools, nil
+}
+
+func (r *appRepository) CreateSchool(ctx context.Context, school *models.School) error {
+	return r.db.WithContext(ctx).Create(school).Error
+}
+
 func (r *appRepository) GetUserBookmarks(ctx context.Context, userID string, bookmarkType *string) ([]models.Bookmark, error) {
 	var bookmarks []models.Bookmark
 	query := r.db.WithContext(ctx).Where("user_id = ?", userID)

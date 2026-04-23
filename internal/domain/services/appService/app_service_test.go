@@ -71,6 +71,34 @@ func (m *mockAppRepo) DeleteHabitCompletion(context.Context, string, string, str
 	return nil
 }
 
+func (m *mockAppRepo) UpsertPushSubscription(context.Context, *models.PushSubscription) error {
+	return nil
+}
+
+func (m *mockAppRepo) DeletePushSubscriptionByUserEndpoint(context.Context, string, string) error {
+	return nil
+}
+
+func (m *mockAppRepo) DeletePushSubscriptionByEndpoint(context.Context, string) error {
+	return nil
+}
+
+func (m *mockAppRepo) GetActivePushTimezones(context.Context) ([]string, error) {
+	return nil, nil
+}
+
+func (m *mockAppRepo) GetDuePushReminderTargets(context.Context, string, string, string) ([]models.PushReminderTarget, error) {
+	return nil, nil
+}
+
+func (m *mockAppRepo) GetSchools(context.Context) ([]models.School, error) {
+	return nil, nil
+}
+
+func (m *mockAppRepo) CreateSchool(context.Context, *models.School) error {
+	return nil
+}
+
 func (m *mockAppRepo) GetUserBookmarks(context.Context, string, *string) ([]models.Bookmark, error) {
 	return nil, nil
 }

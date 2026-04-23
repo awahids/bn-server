@@ -18,6 +18,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -30,7 +31,9 @@ import (
 	"github.com/awahids/bn-server/internal/delivery/handlers/habithandler"
 	"github.com/awahids/bn-server/internal/delivery/handlers/progresshandler"
 	"github.com/awahids/bn-server/internal/delivery/handlers/publichandler"
+	"github.com/awahids/bn-server/internal/delivery/handlers/pushhandler"
 	"github.com/awahids/bn-server/internal/delivery/handlers/quizhandler"
+	"github.com/awahids/bn-server/internal/delivery/handlers/schoolhandler"
 	"github.com/awahids/bn-server/internal/delivery/handlers/userhandler"
 	"github.com/awahids/bn-server/internal/delivery/router"
 	apprepo "github.com/awahids/bn-server/internal/domain/repositories/apprepo"
@@ -39,6 +42,7 @@ import (
 	appservice "github.com/awahids/bn-server/internal/domain/services/appservice"
 	authservice "github.com/awahids/bn-server/internal/domain/services/authservice"
 	publicservice "github.com/awahids/bn-server/internal/domain/services/publicservice"
+	pushservice "github.com/awahids/bn-server/internal/domain/services/pushservice"
 	"github.com/awahids/bn-server/internal/infrastructure/database"
 	"github.com/awahids/bn-server/internal/infrastructure/googleauth"
 )
@@ -80,6 +84,8 @@ func main() {
 	bookmarkHandler := bookmarkhandler.NewBookmarkHandler(appService)
 	dhikrHandler := dhikrhandler.NewDhikrHandler(appService)
 	habitHandler := habithandler.NewHabitHandler(appService)
+	pushHandler := pushhandler.NewPushHandler(appService, cfg.Push.VAPIDPublicKey, cfg.Push.Enabled)
+	schoolHandler := schoolhandler.NewSchoolHandler(appService)
 	quizHandler := quizhandler.NewQuizHandler(appService)
 
 	publicService := publicservice.NewPublicService(nil)
@@ -96,10 +102,23 @@ func main() {
 		bookmarkHandler,
 		dhikrHandler,
 		habitHandler,
+		pushHandler,
+		schoolHandler,
 		quizHandler,
 		publicHandler,
 		aiHandler,
 	)
+
+	pushScheduler := pushservice.NewPushService(appRepository, cfg.Push)
+	pushCtx, stopPushScheduler := context.WithCancel(context.Background())
+	var bgWorkers sync.WaitGroup
+	if pushScheduler.IsEnabled() {
+		bgWorkers.Add(1)
+		go func() {
+			defer bgWorkers.Done()
+			pushScheduler.Run(pushCtx)
+		}()
+	}
 
 	server := &http.Server{
 		Addr:              net.JoinHostPort(cfg.Server.Host, cfg.Server.Port),
@@ -129,6 +148,9 @@ func main() {
 	if err := server.Shutdown(shutdownCtx); err != nil {
 		log.Fatalf("graceful shutdown failed: %v", err)
 	}
+
+	stopPushScheduler()
+	bgWorkers.Wait()
 
 	log.Println("server stopped")
 }
