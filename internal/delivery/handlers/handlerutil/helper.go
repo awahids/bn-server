@@ -63,7 +63,15 @@ func IsValidUsername(username string) bool {
 }
 
 func IsValidDate(value string) bool {
-	return dateRegex.MatchString(value)
+	if !dateRegex.MatchString(value) {
+		return false
+	}
+
+	parsedDate, err := time.Parse("2006-01-02", value)
+	if err != nil {
+		return false
+	}
+	return parsedDate.Format("2006-01-02") == value
 }
 
 func IsValidProgressModule(module string) bool {
