@@ -25,3 +25,27 @@ func TestIsValidDate(t *testing.T) {
 		})
 	}
 }
+
+func TestIsValidProgressModule(t *testing.T) {
+	testCases := []struct {
+		name   string
+		module string
+		valid  bool
+	}{
+		{name: "hijaiyah", module: "hijaiyah", valid: true},
+		{name: "tajwid", module: "tajwid", valid: true},
+		{name: "quran", module: "quran", valid: true},
+		{name: "dhikr", module: "dhikr", valid: true},
+		{name: "quiz", module: "quiz", valid: true},
+		{name: "hafalan", module: "hafalan", valid: true},
+		{name: "invalid", module: "unknown", valid: false},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := IsValidProgressModule(tc.module); got != tc.valid {
+				t.Fatalf("expected %v, got %v for module %q", tc.valid, got, tc.module)
+			}
+		})
+	}
+}

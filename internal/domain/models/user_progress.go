@@ -11,9 +11,11 @@ type ProgressModule string
 
 const (
 	ModuleHijaiyah ProgressModule = "hijaiyah"
+	ModuleTajwid   ProgressModule = "tajwid"
 	ModuleQuran    ProgressModule = "quran"
 	ModuleDhikr    ProgressModule = "dhikr"
 	ModuleQuiz     ProgressModule = "quiz"
+	ModuleHafalan  ProgressModule = "hafalan"
 )
 
 type UserProgress struct {

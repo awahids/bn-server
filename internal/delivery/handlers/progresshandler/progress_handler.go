@@ -29,7 +29,7 @@ func NewProgressHandler(appService serviceinterface.AppService) *ProgressHandler
 // @Tags Progress
 // @Produce json
 // @Security BearerAuth
-// @Param module query string false "Filter by module (hijaiyah|quran|dhikr|quiz)"
+// @Param module query string false "Filter by module (hijaiyah|tajwid|quran|dhikr|quiz|hafalan)"
 // @Success 200 {object} response.APIResponse
 // @Failure 400 {object} response.APIResponse
 // @Failure 401 {object} response.APIResponse
@@ -46,7 +46,7 @@ func (h *ProgressHandler) GetProgress(c *gin.Context) {
 	var module *string
 	if moduleQuery != "" {
 		if !handlerutil.IsValidProgressModule(moduleQuery) {
-			response.Failed(c, http.StatusBadRequest, "invalid module", "module must be one of: hijaiyah, quran, dhikr, quiz")
+			response.Failed(c, http.StatusBadRequest, "invalid module", "module must be one of: hijaiyah, tajwid, quran, dhikr, quiz, hafalan")
 			return
 		}
 		module = &moduleQuery
@@ -92,7 +92,7 @@ func (h *ProgressHandler) PostProgress(c *gin.Context) {
 
 	req.Module = strings.TrimSpace(req.Module)
 	if !handlerutil.IsValidProgressModule(req.Module) {
-		response.Failed(c, http.StatusBadRequest, "invalid request data", "module must be one of: hijaiyah, quran, dhikr, quiz")
+		response.Failed(c, http.StatusBadRequest, "invalid request data", "module must be one of: hijaiyah, tajwid, quran, dhikr, quiz, hafalan")
 		return
 	}
 
@@ -158,7 +158,7 @@ func (h *ProgressHandler) GetProgressItem(c *gin.Context) {
 
 	module := strings.TrimSpace(c.Param("module"))
 	if !handlerutil.IsValidProgressModule(module) {
-		response.Failed(c, http.StatusBadRequest, "invalid module", "module must be one of: hijaiyah, quran, dhikr, quiz")
+		response.Failed(c, http.StatusBadRequest, "invalid module", "module must be one of: hijaiyah, tajwid, quran, dhikr, quiz, hafalan")
 		return
 	}
 

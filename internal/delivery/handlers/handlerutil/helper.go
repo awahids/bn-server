@@ -76,7 +76,12 @@ func IsValidDate(value string) bool {
 
 func IsValidProgressModule(module string) bool {
 	switch module {
-	case string(models.ModuleHijaiyah), string(models.ModuleQuran), string(models.ModuleDhikr), string(models.ModuleQuiz):
+	case string(models.ModuleHijaiyah),
+		string(models.ModuleTajwid),
+		string(models.ModuleQuran),
+		string(models.ModuleDhikr),
+		string(models.ModuleQuiz),
+		string(models.ModuleHafalan):
 		return true
 	default:
 		return false
