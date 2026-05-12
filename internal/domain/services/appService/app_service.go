@@ -672,6 +672,30 @@ func (s *appService) GetAchievements(ctx context.Context, userID string) ([]serv
 	return achievements, nil
 }
 
+func (s *appService) GetHijaiyahLetters(ctx context.Context) ([]models.HijaiyahLetter, error) {
+	return s.repo.GetHijaiyahLetters(ctx)
+}
+
+func (s *appService) GetHijaiyahLetterByID(ctx context.Context, id string) (*models.HijaiyahLetter, error) {
+	return s.repo.GetHijaiyahLetterByID(ctx, id)
+}
+
+func (s *appService) GetQuizCategories(ctx context.Context) ([]models.QuizCategory, error) {
+	return s.repo.GetQuizCategories(ctx)
+}
+
+func (s *appService) GetQuizQuestions(ctx context.Context, categoryID *string) ([]models.QuizQuestion, error) {
+	return s.repo.GetQuizQuestions(ctx, categoryID)
+}
+
+func (s *appService) GetQuranSurahs(ctx context.Context) ([]models.QuranSurah, error) {
+	return s.repo.GetQuranSurahs(ctx)
+}
+
+func (s *appService) GetQuranSurahByID(ctx context.Context, id int) (*models.QuranSurah, error) {
+	return s.repo.GetQuranSurahByID(ctx, id)
+}
+
 func (s *appService) GetWeeklyActivity(ctx context.Context, userID string) ([]serviceinterface.WeeklyActivityItem, error) {
 	now := time.Now()
 	activity := make([]serviceinterface.WeeklyActivityItem, 7)

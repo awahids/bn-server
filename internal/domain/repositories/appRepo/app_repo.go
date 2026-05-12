@@ -434,3 +434,67 @@ func (r *appRepository) GetUserQuizAttempts(ctx context.Context, userID string, 
 func (r *appRepository) CreateQuizAttempt(ctx context.Context, attempt *models.QuizAttempt) error {
 	return r.db.WithContext(ctx).Create(attempt).Error
 }
+
+func (r *appRepository) GetHijaiyahLetters(ctx context.Context) ([]models.HijaiyahLetter, error) {
+	var letters []models.HijaiyahLetter
+	err := r.db.WithContext(ctx).Order("sort_order ASC").Find(&letters).Error
+	if err != nil {
+		return nil, err
+	}
+	return letters, nil
+}
+
+func (r *appRepository) GetHijaiyahLetterByID(ctx context.Context, id string) (*models.HijaiyahLetter, error) {
+	var letter models.HijaiyahLetter
+	err := r.db.WithContext(ctx).Where("id = ?", id).First(&letter).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &letter, nil
+}
+
+func (r *appRepository) GetQuizCategories(ctx context.Context) ([]models.QuizCategory, error) {
+	var categories []models.QuizCategory
+	err := r.db.WithContext(ctx).Order("id ASC").Find(&categories).Error
+	if err != nil {
+		return nil, err
+	}
+	return categories, nil
+}
+
+func (r *appRepository) GetQuizQuestions(ctx context.Context, categoryID *string) ([]models.QuizQuestion, error) {
+	var questions []models.QuizQuestion
+	query := r.db.WithContext(ctx)
+	if categoryID != nil && *categoryID != "" {
+		query = query.Where("category_id = ?", *categoryID)
+	}
+	err := query.Order("id ASC").Find(&questions).Error
+	if err != nil {
+		return nil, err
+	}
+	return questions, nil
+}
+
+func (r *appRepository) GetQuranSurahs(ctx context.Context) ([]models.QuranSurah, error) {
+	var surahs []models.QuranSurah
+	err := r.db.WithContext(ctx).Order("id ASC").Find(&surahs).Error
+	if err != nil {
+		return nil, err
+	}
+	return surahs, nil
+}
+
+func (r *appRepository) GetQuranSurahByID(ctx context.Context, id int) (*models.QuranSurah, error) {
+	var surah models.QuranSurah
+	err := r.db.WithContext(ctx).Where("id = ?", id).First(&surah).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &surah, nil
+}

@@ -29,10 +29,13 @@ import (
 	"github.com/awahids/bn-server/internal/delivery/handlers/bookmarkhandler"
 	"github.com/awahids/bn-server/internal/delivery/handlers/dhikrhandler"
 	"github.com/awahids/bn-server/internal/delivery/handlers/habithandler"
+	"github.com/awahids/bn-server/internal/delivery/handlers/hijaiyahhandler"
 	"github.com/awahids/bn-server/internal/delivery/handlers/progresshandler"
 	"github.com/awahids/bn-server/internal/delivery/handlers/publichandler"
 	"github.com/awahids/bn-server/internal/delivery/handlers/pushhandler"
+	"github.com/awahids/bn-server/internal/delivery/handlers/quizcontenthandler"
 	"github.com/awahids/bn-server/internal/delivery/handlers/quizhandler"
+	"github.com/awahids/bn-server/internal/delivery/handlers/qurancontenthandler"
 	"github.com/awahids/bn-server/internal/delivery/handlers/schoolhandler"
 	"github.com/awahids/bn-server/internal/delivery/handlers/userhandler"
 	"github.com/awahids/bn-server/internal/delivery/router"
@@ -87,6 +90,9 @@ func main() {
 	pushHandler := pushhandler.NewPushHandler(appService, cfg.Push.VAPIDPublicKey, cfg.Push.Enabled)
 	schoolHandler := schoolhandler.NewSchoolHandler(appService)
 	quizHandler := quizhandler.NewQuizHandler(appService)
+	hijaiyahHandler := hijaiyahhandler.NewHijaiyahHandler(appService)
+	quizContentHandler := quizcontenthandler.NewQuizContentHandler(appService)
+	quranContentHandler := qurancontenthandler.NewQuranContentHandler(appService)
 
 	publicService := publicservice.NewPublicService(nil)
 	publicHandler := publichandler.NewPublicHandler(publicService)
@@ -107,6 +113,9 @@ func main() {
 		quizHandler,
 		publicHandler,
 		aiHandler,
+		hijaiyahHandler,
+		quizContentHandler,
+		quranContentHandler,
 	)
 
 	pushScheduler := pushservice.NewPushService(appRepository, cfg.Push)

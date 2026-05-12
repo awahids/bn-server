@@ -10,10 +10,13 @@ import (
 	"github.com/awahids/bn-server/internal/delivery/handlers/bookmarkhandler"
 	"github.com/awahids/bn-server/internal/delivery/handlers/dhikrhandler"
 	"github.com/awahids/bn-server/internal/delivery/handlers/habithandler"
+	"github.com/awahids/bn-server/internal/delivery/handlers/hijaiyahhandler"
 	"github.com/awahids/bn-server/internal/delivery/handlers/progresshandler"
 	"github.com/awahids/bn-server/internal/delivery/handlers/publichandler"
 	"github.com/awahids/bn-server/internal/delivery/handlers/pushhandler"
+	"github.com/awahids/bn-server/internal/delivery/handlers/quizcontenthandler"
 	"github.com/awahids/bn-server/internal/delivery/handlers/quizhandler"
+	"github.com/awahids/bn-server/internal/delivery/handlers/qurancontenthandler"
 	"github.com/awahids/bn-server/internal/delivery/handlers/schoolhandler"
 	"github.com/awahids/bn-server/internal/delivery/handlers/userhandler"
 	"github.com/awahids/bn-server/internal/delivery/middleware"
@@ -21,10 +24,13 @@ import (
 	bookmarkrouter "github.com/awahids/bn-server/internal/delivery/router/bookmarkrouter"
 	dhikrrouter "github.com/awahids/bn-server/internal/delivery/router/dhikrrouter"
 	habitrouter "github.com/awahids/bn-server/internal/delivery/router/habitrouter"
+	hijaiyahrouter "github.com/awahids/bn-server/internal/delivery/router/hijaiyahrouter"
 	progressrouter "github.com/awahids/bn-server/internal/delivery/router/progressrouter"
 	publicrouter "github.com/awahids/bn-server/internal/delivery/router/publicrouter"
 	pushrouter "github.com/awahids/bn-server/internal/delivery/router/pushrouter"
+	quizcontentrouter "github.com/awahids/bn-server/internal/delivery/router/quizcontentrouter"
 	quizrouter "github.com/awahids/bn-server/internal/delivery/router/quizrouter"
+	qurancontentrouter "github.com/awahids/bn-server/internal/delivery/router/qurancontentrouter"
 	schoolrouter "github.com/awahids/bn-server/internal/delivery/router/schoolrouter"
 	userrouter "github.com/awahids/bn-server/internal/delivery/router/userrouter"
 
@@ -61,6 +67,9 @@ func NewRouter(
 	quizHandler *quizhandler.QuizHandler,
 	publicHandler *publichandler.PublicHandler,
 	aiHandler *aihandler.AIHandler,
+	hijaiyahHandler *hijaiyahhandler.HijaiyahHandler,
+	quizContentHandler *quizcontenthandler.QuizContentHandler,
+	quranContentHandler *qurancontenthandler.QuranContentHandler,
 ) *gin.Engine {
 	engine := gin.New()
 	engine.Use(gin.Logger())
@@ -110,6 +119,9 @@ func NewRouter(
 	pushrouter.RegisterPushRoutes(apiV1, pushHandler, authMiddleware)
 	schoolrouter.RegisterSchoolRoutes(apiV1, schoolHandler, authMiddleware)
 	quizrouter.RegisterQuizRoutes(apiV1, quizHandler, authMiddleware)
+	hijaiyahrouter.RegisterHijaiyahRoutes(apiV1, hijaiyahHandler)
+	quizcontentrouter.RegisterQuizContentRoutes(apiV1, quizContentHandler)
+	qurancontentrouter.RegisterQuranContentRoutes(apiV1, quranContentHandler)
 
 	aiGroup := apiV1.Group("/ai")
 	{
@@ -129,6 +141,9 @@ func NewRouter(
 	pushrouter.RegisterPushRoutes(apiLegacy, pushHandler, authMiddleware)
 	schoolrouter.RegisterSchoolRoutes(apiLegacy, schoolHandler, authMiddleware)
 	quizrouter.RegisterQuizRoutes(apiLegacy, quizHandler, authMiddleware)
+	hijaiyahrouter.RegisterHijaiyahRoutes(apiLegacy, hijaiyahHandler)
+	quizcontentrouter.RegisterQuizContentRoutes(apiLegacy, quizContentHandler)
+	qurancontentrouter.RegisterQuranContentRoutes(apiLegacy, quranContentHandler)
 
 	return engine
 }

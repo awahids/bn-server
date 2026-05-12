@@ -184,4 +184,11 @@ type AppService interface {
 
 	GetAchievements(ctx context.Context, userID string) ([]AchievementItem, error)
 	GetWeeklyActivity(ctx context.Context, userID string) ([]WeeklyActivityItem, error)
+
+	GetHijaiyahLetters(ctx context.Context) ([]models.HijaiyahLetter, error)
+	GetHijaiyahLetterByID(ctx context.Context, id string) (*models.HijaiyahLetter, error)
+	GetQuizCategories(ctx context.Context) ([]models.QuizCategory, error)
+	GetQuizQuestions(ctx context.Context, categoryID *string) ([]models.QuizQuestion, error)
+	GetQuranSurahs(ctx context.Context) ([]models.QuranSurah, error)
+	GetQuranSurahByID(ctx context.Context, id int) (*models.QuranSurah, error)
 }
