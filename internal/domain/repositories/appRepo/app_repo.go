@@ -465,13 +465,16 @@ func (r *appRepository) GetQuizCategories(ctx context.Context) ([]models.QuizCat
 	return categories, nil
 }
 
-func (r *appRepository) GetQuizQuestions(ctx context.Context, categoryID *string) ([]models.QuizQuestion, error) {
+func (r *appRepository) GetQuizQuestions(ctx context.Context, categoryID *string, difficulty *string) ([]models.QuizQuestion, error) {
 	var questions []models.QuizQuestion
 	query := r.db.WithContext(ctx)
 	if categoryID != nil && *categoryID != "" {
 		query = query.Where("category_id = ?", *categoryID)
 	}
-	err := query.Order("id ASC").Find(&questions).Error
+	if difficulty != nil && *difficulty != "" {
+		query = query.Where("difficulty = ?", *difficulty)
+	}
+	err := query.Order("category_id ASC, difficulty_order ASC, id ASC").Find(&questions).Error
 	if err != nil {
 		return nil, err
 	}
@@ -497,4 +500,25 @@ func (r *appRepository) GetQuranSurahByID(ctx context.Context, id int) (*models.
 		return nil, err
 	}
 	return &surah, nil
+}
+
+func (r *appRepository) GetTajwidRules(ctx context.Context) ([]models.TajwidRule, error) {
+	var rules []models.TajwidRule
+	err := r.db.WithContext(ctx).Order("sort_order ASC").Find(&rules).Error
+	if err != nil {
+		return nil, err
+	}
+	return rules, nil
+}
+
+func (r *appRepository) GetTajwidRuleByID(ctx context.Context, id string) (*models.TajwidRule, error) {
+	var rule models.TajwidRule
+	err := r.db.WithContext(ctx).Where("id = ?", id).First(&rule).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &rule, nil
 }

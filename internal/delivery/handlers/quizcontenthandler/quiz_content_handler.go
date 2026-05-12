@@ -42,7 +42,16 @@ func (h *QuizContentHandler) GetQuizQuestions(c *gin.Context) {
 		categoryID = &cat
 	}
 
-	questions, err := h.appService.GetQuizQuestions(ctx, categoryID)
+	var difficulty *string
+	if d := strings.TrimSpace(c.Query("difficulty")); d != "" {
+		if d != "easy" && d != "medium" && d != "hard" {
+			response.Failed(c, http.StatusBadRequest, "invalid difficulty", "difficulty must be easy, medium, or hard")
+			return
+		}
+		difficulty = &d
+	}
+
+	questions, err := h.appService.GetQuizQuestions(ctx, categoryID, difficulty)
 	if err != nil {
 		response.Failed(c, http.StatusInternalServerError, "failed to get quiz questions", err.Error())
 		return

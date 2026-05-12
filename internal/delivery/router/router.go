@@ -11,6 +11,7 @@ import (
 	"github.com/awahids/bn-server/internal/delivery/handlers/dhikrhandler"
 	"github.com/awahids/bn-server/internal/delivery/handlers/habithandler"
 	"github.com/awahids/bn-server/internal/delivery/handlers/hijaiyahhandler"
+	"github.com/awahids/bn-server/internal/delivery/handlers/tajwidhandler"
 	"github.com/awahids/bn-server/internal/delivery/handlers/progresshandler"
 	"github.com/awahids/bn-server/internal/delivery/handlers/publichandler"
 	"github.com/awahids/bn-server/internal/delivery/handlers/pushhandler"
@@ -25,6 +26,7 @@ import (
 	dhikrrouter "github.com/awahids/bn-server/internal/delivery/router/dhikrrouter"
 	habitrouter "github.com/awahids/bn-server/internal/delivery/router/habitrouter"
 	hijaiyahrouter "github.com/awahids/bn-server/internal/delivery/router/hijaiyahrouter"
+	tajwidrouter "github.com/awahids/bn-server/internal/delivery/router/tajwidrouter"
 	progressrouter "github.com/awahids/bn-server/internal/delivery/router/progressrouter"
 	publicrouter "github.com/awahids/bn-server/internal/delivery/router/publicrouter"
 	pushrouter "github.com/awahids/bn-server/internal/delivery/router/pushrouter"
@@ -70,6 +72,7 @@ func NewRouter(
 	hijaiyahHandler *hijaiyahhandler.HijaiyahHandler,
 	quizContentHandler *quizcontenthandler.QuizContentHandler,
 	quranContentHandler *qurancontenthandler.QuranContentHandler,
+	tajwidHandler *tajwidhandler.TajwidHandler,
 ) *gin.Engine {
 	engine := gin.New()
 	engine.Use(gin.Logger())
@@ -122,6 +125,7 @@ func NewRouter(
 	hijaiyahrouter.RegisterHijaiyahRoutes(apiV1, hijaiyahHandler)
 	quizcontentrouter.RegisterQuizContentRoutes(apiV1, quizContentHandler)
 	qurancontentrouter.RegisterQuranContentRoutes(apiV1, quranContentHandler)
+	tajwidrouter.RegisterTajwidRoutes(apiV1, tajwidHandler)
 
 	aiGroup := apiV1.Group("/ai")
 	{
@@ -144,6 +148,7 @@ func NewRouter(
 	hijaiyahrouter.RegisterHijaiyahRoutes(apiLegacy, hijaiyahHandler)
 	quizcontentrouter.RegisterQuizContentRoutes(apiLegacy, quizContentHandler)
 	qurancontentrouter.RegisterQuranContentRoutes(apiLegacy, quranContentHandler)
+	tajwidrouter.RegisterTajwidRoutes(apiLegacy, tajwidHandler)
 
 	return engine
 }

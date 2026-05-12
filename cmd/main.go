@@ -37,6 +37,7 @@ import (
 	"github.com/awahids/bn-server/internal/delivery/handlers/quizhandler"
 	"github.com/awahids/bn-server/internal/delivery/handlers/qurancontenthandler"
 	"github.com/awahids/bn-server/internal/delivery/handlers/schoolhandler"
+	"github.com/awahids/bn-server/internal/delivery/handlers/tajwidhandler"
 	"github.com/awahids/bn-server/internal/delivery/handlers/userhandler"
 	"github.com/awahids/bn-server/internal/delivery/router"
 	apprepo "github.com/awahids/bn-server/internal/domain/repositories/apprepo"
@@ -93,6 +94,7 @@ func main() {
 	hijaiyahHandler := hijaiyahhandler.NewHijaiyahHandler(appService)
 	quizContentHandler := quizcontenthandler.NewQuizContentHandler(appService)
 	quranContentHandler := qurancontenthandler.NewQuranContentHandler(appService)
+	tajwidHandler := tajwidhandler.NewTajwidHandler(appService)
 
 	publicService := publicservice.NewPublicService(nil)
 	publicHandler := publichandler.NewPublicHandler(publicService)
@@ -116,6 +118,7 @@ func main() {
 		hijaiyahHandler,
 		quizContentHandler,
 		quranContentHandler,
+		tajwidHandler,
 	)
 
 	pushScheduler := pushservice.NewPushService(appRepository, cfg.Push)

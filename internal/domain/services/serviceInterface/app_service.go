@@ -188,7 +188,10 @@ type AppService interface {
 	GetHijaiyahLetters(ctx context.Context) ([]models.HijaiyahLetter, error)
 	GetHijaiyahLetterByID(ctx context.Context, id string) (*models.HijaiyahLetter, error)
 	GetQuizCategories(ctx context.Context) ([]models.QuizCategory, error)
-	GetQuizQuestions(ctx context.Context, categoryID *string) ([]models.QuizQuestion, error)
+	GetQuizQuestions(ctx context.Context, categoryID *string, difficulty *string) ([]models.QuizQuestion, error)
 	GetQuranSurahs(ctx context.Context) ([]models.QuranSurah, error)
 	GetQuranSurahByID(ctx context.Context, id int) (*models.QuranSurah, error)
+
+	GetTajwidRules(ctx context.Context) ([]models.TajwidRule, error)
+	GetTajwidRuleByID(ctx context.Context, id string) (*models.TajwidRule, error)
 }

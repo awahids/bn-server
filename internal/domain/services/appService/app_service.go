@@ -684,8 +684,8 @@ func (s *appService) GetQuizCategories(ctx context.Context) ([]models.QuizCatego
 	return s.repo.GetQuizCategories(ctx)
 }
 
-func (s *appService) GetQuizQuestions(ctx context.Context, categoryID *string) ([]models.QuizQuestion, error) {
-	return s.repo.GetQuizQuestions(ctx, categoryID)
+func (s *appService) GetQuizQuestions(ctx context.Context, categoryID *string, difficulty *string) ([]models.QuizQuestion, error) {
+	return s.repo.GetQuizQuestions(ctx, categoryID, difficulty)
 }
 
 func (s *appService) GetQuranSurahs(ctx context.Context) ([]models.QuranSurah, error) {
@@ -694,6 +694,14 @@ func (s *appService) GetQuranSurahs(ctx context.Context) ([]models.QuranSurah, e
 
 func (s *appService) GetQuranSurahByID(ctx context.Context, id int) (*models.QuranSurah, error) {
 	return s.repo.GetQuranSurahByID(ctx, id)
+}
+
+func (s *appService) GetTajwidRules(ctx context.Context) ([]models.TajwidRule, error) {
+	return s.repo.GetTajwidRules(ctx)
+}
+
+func (s *appService) GetTajwidRuleByID(ctx context.Context, id string) (*models.TajwidRule, error) {
+	return s.repo.GetTajwidRuleByID(ctx, id)
 }
 
 func (s *appService) GetWeeklyActivity(ctx context.Context, userID string) ([]serviceinterface.WeeklyActivityItem, error) {
