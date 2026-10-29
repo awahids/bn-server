@@ -40,6 +40,9 @@ func TestGetPrayerTimes_Success(t *testing.T) {
 	svc := NewPublicService(client)
 	times, meta := svc.GetPrayerTimes(context.Background(), -6.2, 106.8, "2026-04-20", "2")
 
+	if times.Date != "2026-04-20" {
+		t.Fatalf("expected date 2026-04-20, got %s", times.Date)
+	}
 	if times.Fajr != "04:30" {
 		t.Fatalf("expected fajr 04:30, got %s", times.Fajr)
 	}

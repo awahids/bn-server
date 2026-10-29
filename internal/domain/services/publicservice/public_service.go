@@ -149,7 +149,9 @@ func (s *publicService) fetchPrayerTimes(
 			Asr:     payload.Data.Timings.Asr,
 			Maghrib: payload.Data.Timings.Maghrib,
 			Isha:    payload.Data.Timings.Isha,
-			Date:    payload.Data.Date.Gregorian.Date,
+			// Keep the requested YYYY-MM-DD format (Aladhan returns DD-MM-YYYY) so
+			// the response matches the fallback and the endpoint's documented format.
+			Date: dateValue,
 			Location: serviceinterface.PrayerLocation{
 				Latitude:  latitude,
 				Longitude: longitude,
