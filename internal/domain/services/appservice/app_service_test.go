@@ -140,6 +140,38 @@ func (m *mockAppRepo) CreateQuizAttempt(context.Context, *models.QuizAttempt) er
 	return nil
 }
 
+func (m *mockAppRepo) GetHijaiyahLetters(context.Context) ([]models.HijaiyahLetter, error) {
+	return nil, nil
+}
+
+func (m *mockAppRepo) GetHijaiyahLetterByID(context.Context, string) (*models.HijaiyahLetter, error) {
+	return nil, nil
+}
+
+func (m *mockAppRepo) GetQuizCategories(context.Context) ([]models.QuizCategory, error) {
+	return nil, nil
+}
+
+func (m *mockAppRepo) GetQuizQuestions(context.Context, *string, *string) ([]models.QuizQuestion, error) {
+	return nil, nil
+}
+
+func (m *mockAppRepo) GetQuranSurahs(context.Context) ([]models.QuranSurah, error) {
+	return nil, nil
+}
+
+func (m *mockAppRepo) GetQuranSurahByID(context.Context, int) (*models.QuranSurah, error) {
+	return nil, nil
+}
+
+func (m *mockAppRepo) GetTajwidRules(context.Context) ([]models.TajwidRule, error) {
+	return nil, nil
+}
+
+func (m *mockAppRepo) GetTajwidRuleByID(context.Context, string) (*models.TajwidRule, error) {
+	return nil, nil
+}
+
 func TestCreateBookmark_Success(t *testing.T) {
 	repo := &mockAppRepo{createBookmarkCreated: true}
 	svc := NewAppService(repo)

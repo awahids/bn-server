@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"testing"
@@ -22,6 +23,9 @@ func TestGetPrayerTimes_Success(t *testing.T) {
 		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
 			switch req.URL.Host {
 			case "api.aladhan.com":
+				if req.URL.Path != "/v1/timings/20-04-2026" {
+					return nil, fmt.Errorf("unexpected aladhan path %s", req.URL.Path)
+				}
 				body := `{"code":200,"data":{"timings":{"Fajr":"04:30","Sunrise":"05:45","Dhuhr":"12:05","Asr":"15:25","Maghrib":"18:05","Isha":"19:15"},"date":{"gregorian":{"date":"20-04-2026"}},"meta":{"timezone":"Asia/Jakarta","method":{"name":"Muslim World League"}}}}`
 				return httpResponse(http.StatusOK, body), nil
 			case "nominatim.openstreetmap.org":
@@ -36,6 +40,9 @@ func TestGetPrayerTimes_Success(t *testing.T) {
 	svc := NewPublicService(client)
 	times, meta := svc.GetPrayerTimes(context.Background(), -6.2, 106.8, "2026-04-20", "2")
 
+	if times.Date != "2026-04-20" {
+		t.Fatalf("expected date 2026-04-20, got %s", times.Date)
+	}
 	if times.Fajr != "04:30" {
 		t.Fatalf("expected fajr 04:30, got %s", times.Fajr)
 	}
@@ -72,6 +79,24 @@ func TestGetPrayerTimes_FallbackWhenProviderFails(t *testing.T) {
 	}
 	if meta.Note == "" {
 		t.Fatal("expected fallback note to be present")
+	}
+
+	// Jakarta on 2026-04-20 (WIB): Subuh ~04:3x, Dzuhur ~11:5x, Maghrib ~17:5x.
+	expectations := map[string]struct {
+		value string
+		from  string
+		to    string
+	}{
+		"fajr":    {times.Fajr, "04:20", "04:45"},
+		"dhuhr":   {times.Dhuhr, "11:45", "12:00"},
+		"asr":     {times.Asr, "15:00", "15:25"},
+		"maghrib": {times.Maghrib, "17:45", "18:05"},
+		"isha":    {times.Isha, "18:55", "19:15"},
+	}
+	for name, exp := range expectations {
+		if exp.value < exp.from || exp.value > exp.to {
+			t.Fatalf("expected fallback %s between %s and %s, got %s", name, exp.from, exp.to, exp.value)
+		}
 	}
 }
 
