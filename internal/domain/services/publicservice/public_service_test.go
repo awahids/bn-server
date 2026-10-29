@@ -57,6 +57,40 @@ func TestGetPrayerTimes_Success(t *testing.T) {
 	}
 }
 
+func TestGetPrayerTimes_CachesProviderResult(t *testing.T) {
+	var aladhanCalls, nominatimCalls int
+	client := &http.Client{
+		Timeout: time.Second,
+		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			switch req.URL.Host {
+			case "api.aladhan.com":
+				aladhanCalls++
+				body := `{"code":200,"data":{"timings":{"Fajr":"04:30","Sunrise":"05:45","Dhuhr":"12:05","Asr":"15:25","Maghrib":"18:05","Isha":"19:15"},"date":{"gregorian":{"date":"20-04-2026"}},"meta":{"timezone":"Asia/Jakarta","method":{"name":"Kemenag"}}}}`
+				return httpResponse(http.StatusOK, body), nil
+			case "nominatim.openstreetmap.org":
+				nominatimCalls++
+				return httpResponse(http.StatusOK, `{"display_name":"Jakarta","address":{"city":"Jakarta"}}`), nil
+			default:
+				return nil, errors.New("unexpected host")
+			}
+		}),
+	}
+
+	svc := NewPublicService(client)
+	first, _ := svc.GetPrayerTimes(context.Background(), -6.2001, 106.8001, "2026-04-20", "20")
+	second, _ := svc.GetPrayerTimes(context.Background(), -6.2002, 106.8002, "2026-04-20", "20")
+
+	if aladhanCalls != 1 || nominatimCalls != 1 {
+		t.Fatalf("expected one provider call each, got aladhan=%d nominatim=%d", aladhanCalls, nominatimCalls)
+	}
+	if second.Fajr != first.Fajr {
+		t.Fatalf("expected cached times, got %s vs %s", second.Fajr, first.Fajr)
+	}
+	if second.Location.Latitude != -6.2002 {
+		t.Fatalf("expected cached response to echo the requested latitude, got %v", second.Location.Latitude)
+	}
+}
+
 func TestGetPrayerTimes_FallbackWhenProviderFails(t *testing.T) {
 	client := &http.Client{
 		Timeout: time.Second,

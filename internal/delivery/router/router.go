@@ -37,6 +37,7 @@ import (
 	userrouter "github.com/awahids/bn-server/internal/delivery/router/userrouter"
 
 	"github.com/gin-contrib/cors"
+	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -77,6 +78,13 @@ func NewRouter(
 	engine := gin.New()
 	engine.Use(gin.Logger())
 	engine.Use(gin.Recovery())
+	// JSON content responses (dhikr, surah list, tajwid rules) are 10-35 KB and
+	// compress ~5x. Audio is already compressed, so the proxy is excluded.
+	engine.Use(gzip.Gzip(gzip.DefaultCompression, gzip.WithExcludedPaths([]string{
+		"/api/v1/audio-proxy",
+		"/api/audio-proxy",
+		"/swagger",
+	})))
 
 	engine.Use(cors.New(cors.Config{
 		AllowOrigins:     cfg.CORS.AllowOrigins,

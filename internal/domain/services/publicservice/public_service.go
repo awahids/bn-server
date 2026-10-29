@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/awahids/bn-server/internal/domain/services/serviceinterface"
@@ -16,8 +17,70 @@ import (
 
 const publicUserAgent = "Hijaiyah-App/1.0"
 
+const (
+	// Prayer times only change per day and location; caching them avoids an
+	// Aladhan round trip on every home-page load.
+	prayerTimesCacheTTL    = 6 * time.Hour
+	prayerFallbackCacheTTL = 10 * time.Minute
+	// Nominatim's usage policy allows ~1 request/second, so place names are
+	// cached aggressively (they practically never change).
+	geocodeCacheTTL      = 24 * time.Hour
+	geocodeEmptyCacheTTL = 10 * time.Minute
+	maxCacheEntries      = 5000
+)
+
 type publicService struct {
 	httpClient *http.Client
+
+	prayerCache  *ttlCache[cachedPrayerTimes]
+	geocodeCache *ttlCache[reverseGeocodeResult]
+}
+
+type cachedPrayerTimes struct {
+	times serviceinterface.PrayerTimes
+	meta  serviceinterface.PrayerTimesMeta
+}
+
+type ttlCacheEntry[T any] struct {
+	value     T
+	expiresAt time.Time
+}
+
+// ttlCache is a small, size-capped, concurrency-safe in-memory cache.
+type ttlCache[T any] struct {
+	mu      sync.Mutex
+	entries map[string]ttlCacheEntry[T]
+}
+
+func newTTLCache[T any]() *ttlCache[T] {
+	return &ttlCache[T]{entries: make(map[string]ttlCacheEntry[T])}
+}
+
+func (c *ttlCache[T]) get(key string, now time.Time) (T, bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	entry, ok := c.entries[key]
+	if !ok || now.After(entry.expiresAt) {
+		var zero T
+		return zero, false
+	}
+	return entry.value, true
+}
+
+func (c *ttlCache[T]) set(key string, value T, ttl time.Duration, now time.Time) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if len(c.entries) >= maxCacheEntries {
+		for k, entry := range c.entries {
+			if now.After(entry.expiresAt) {
+				delete(c.entries, k)
+			}
+		}
+		if len(c.entries) >= maxCacheEntries {
+			c.entries = make(map[string]ttlCacheEntry[T])
+		}
+	}
+	c.entries[key] = ttlCacheEntry[T]{value: value, expiresAt: now.Add(ttl)}
 }
 
 type reverseGeocodeResult struct {
@@ -70,7 +133,11 @@ func NewPublicService(httpClient *http.Client) serviceinterface.PublicService {
 	if client == nil {
 		client = &http.Client{Timeout: 12 * time.Second}
 	}
-	return &publicService{httpClient: client}
+	return &publicService{
+		httpClient:   client,
+		prayerCache:  newTTLCache[cachedPrayerTimes](),
+		geocodeCache: newTTLCache[reverseGeocodeResult](),
+	}
 }
 
 func (s *publicService) GetPrayerTimes(
@@ -80,15 +147,29 @@ func (s *publicService) GetPrayerTimes(
 	dateValue string,
 	method string,
 ) (serviceinterface.PrayerTimes, serviceinterface.PrayerTimesMeta) {
+	// ~110 m precision: nearby users share the same entry.
+	cacheKey := fmt.Sprintf("%s|%s|%.3f|%.3f", dateValue, method, latitude, longitude)
+	if cached, ok := s.prayerCache.get(cacheKey, time.Now()); ok {
+		cached.times.Location.Latitude = latitude
+		cached.times.Location.Longitude = longitude
+		return cached.times, cached.meta
+	}
+
 	times, meta, err := s.fetchPrayerTimes(ctx, latitude, longitude, dateValue, method)
 	if err == nil {
+		s.prayerCache.set(cacheKey, cachedPrayerTimes{times: times, meta: meta}, prayerTimesCacheTTL, time.Now())
 		return times, meta
 	}
 
-	return calculateFallbackPrayerTimes(latitude, longitude, dateValue), serviceinterface.PrayerTimesMeta{
+	fallbackTimes := calculateFallbackPrayerTimes(latitude, longitude, dateValue)
+	fallbackMeta := serviceinterface.PrayerTimesMeta{
 		Method: "Fallback calculation",
 		Note:   "External API unavailable, using approximate times",
 	}
+	// Cache briefly so an Aladhan outage doesn't add a failing round trip to
+	// every request, while still retrying the provider soon.
+	s.prayerCache.set(cacheKey, cachedPrayerTimes{times: fallbackTimes, meta: fallbackMeta}, prayerFallbackCacheTTL, time.Now())
+	return fallbackTimes, fallbackMeta
 }
 
 func (s *publicService) fetchPrayerTimes(
@@ -115,6 +196,12 @@ func (s *publicService) fetchPrayerTimes(
 	}
 	req.Header.Set("User-Agent", publicUserAgent)
 
+	// Look up the place name concurrently instead of after Aladhan answers.
+	placeCh := make(chan reverseGeocodeResult, 1)
+	go func() {
+		placeCh <- s.reverseGeocode(ctx, latitude, longitude)
+	}()
+
 	res, err := s.httpClient.Do(req)
 	if err != nil {
 		return serviceinterface.PrayerTimes{}, serviceinterface.PrayerTimesMeta{}, err
@@ -133,7 +220,7 @@ func (s *publicService) fetchPrayerTimes(
 		return serviceinterface.PrayerTimes{}, serviceinterface.PrayerTimesMeta{}, fmt.Errorf("aladhan response code %d", payload.Code)
 	}
 
-	place := s.reverseGeocode(ctx, latitude, longitude)
+	place := <-placeCh
 	city := place.City
 	if city == nil {
 		timezone := strings.TrimSpace(payload.Data.Meta.Timezone)
@@ -168,6 +255,23 @@ func (s *publicService) fetchPrayerTimes(
 }
 
 func (s *publicService) reverseGeocode(ctx context.Context, latitude float64, longitude float64) reverseGeocodeResult {
+	// ~1 km precision is plenty for a city/district label.
+	cacheKey := fmt.Sprintf("%.2f|%.2f", latitude, longitude)
+	if cached, ok := s.geocodeCache.get(cacheKey, time.Now()); ok {
+		return cached
+	}
+
+	place := s.fetchReverseGeocode(ctx, latitude, longitude)
+	ttl := geocodeCacheTTL
+	if place.City == nil && place.District == nil && place.Label == nil {
+		// Failed or empty lookups are retried sooner.
+		ttl = geocodeEmptyCacheTTL
+	}
+	s.geocodeCache.set(cacheKey, place, ttl, time.Now())
+	return place
+}
+
+func (s *publicService) fetchReverseGeocode(ctx context.Context, latitude float64, longitude float64) reverseGeocodeResult {
 	reverseURL, err := url.Parse("https://nominatim.openstreetmap.org/reverse")
 	if err != nil {
 		return reverseGeocodeResult{}
