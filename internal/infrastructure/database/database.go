@@ -3,7 +3,6 @@ package database
 import (
 	"fmt"
 	"log"
-	"time"
 
 	"github.com/awahids/bn-server/configs"
 
@@ -52,8 +51,4 @@ func Close(db *gorm.DB) {
 		return
 	}
 	_ = sqlDB.Close()
-}
-
-func WithTimeout() (time.Time, time.Duration) {
-	return time.Now(), 5 * time.Second
 }
