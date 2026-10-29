@@ -2,6 +2,7 @@ package repointerface
 
 import (
 	"context"
+	"time"
 
 	"github.com/awahids/bn-server/internal/domain/models"
 )
@@ -29,6 +30,7 @@ type AppRepository interface {
 	DeletePushSubscriptionByEndpoint(ctx context.Context, endpoint string) error
 	GetActivePushTimezones(ctx context.Context) ([]string, error)
 	GetDuePushReminderTargets(ctx context.Context, timezone, reminderTime, date string) ([]models.PushReminderTarget, error)
+	GetDueDailyReminderTargets(ctx context.Context, timezone string, dayStart time.Time) ([]models.PushReminderTarget, error)
 
 	GetSchools(ctx context.Context) ([]models.School, error)
 	CreateSchool(ctx context.Context, school *models.School) error

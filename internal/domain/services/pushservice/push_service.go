@@ -24,6 +24,9 @@ type PushService struct {
 	httpClient      *http.Client
 }
 
+// DailyReminderTime is the local time the daily study reminder goes out.
+const DailyReminderTime = "19:00"
+
 type reminderPayload struct {
 	Title string `json:"title"`
 	Body  string `json:"body"`
@@ -112,8 +115,22 @@ func (s *PushService) DispatchOnce(ctx context.Context, now time.Time) error {
 		}
 
 		for _, target := range targets {
-			if err := s.sendReminder(ctx, target); err != nil {
+			if err := s.sendReminder(ctx, habitReminderPayload(target), target); err != nil {
 				log.Printf("push send failed user=%s habit=%s endpoint=%s: %v", target.UserID, target.HabitID, target.Endpoint, err)
+			}
+		}
+
+		if reminderTime != DailyReminderTime {
+			continue
+		}
+		dailyTargets, err := s.repo.GetDueDailyReminderTargets(ctx, timezone, startOfDay(localNow))
+		if err != nil {
+			log.Printf("push daily reminder query failed timezone=%s: %v", timezone, err)
+			continue
+		}
+		for _, target := range dailyTargets {
+			if err := s.sendReminder(ctx, dailyReminderPayload(localDate), target); err != nil {
+				log.Printf("push daily reminder failed user=%s endpoint=%s: %v", target.UserID, target.Endpoint, err)
 			}
 		}
 	}
@@ -121,14 +138,30 @@ func (s *PushService) DispatchOnce(ctx context.Context, now time.Time) error {
 	return nil
 }
 
-func (s *PushService) sendReminder(ctx context.Context, target models.PushReminderTarget) error {
-	payload := reminderPayload{
+func habitReminderPayload(target models.PushReminderTarget) reminderPayload {
+	return reminderPayload{
 		Title: "Pengingat Habit",
 		Body:  "Saatnya: " + target.HabitName,
 		URL:   "/habits",
 		Tag:   "habit-reminder-" + target.HabitID,
 	}
+}
 
+func dailyReminderPayload(localDate string) reminderPayload {
+	return reminderPayload{
+		Title: "Waktunya Belajar Ngaji",
+		Body:  "Kamu belum belajar hari ini. Luangkan 5 menit untuk lanjut, yuk!",
+		URL:   "/modules",
+		Tag:   "daily-reminder-" + localDate,
+	}
+}
+
+func startOfDay(t time.Time) time.Time {
+	year, month, day := t.Date()
+	return time.Date(year, month, day, 0, 0, 0, 0, t.Location())
+}
+
+func (s *PushService) sendReminder(ctx context.Context, payload reminderPayload, target models.PushReminderTarget) error {
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
 		return err

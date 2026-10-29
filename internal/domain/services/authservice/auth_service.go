@@ -3,6 +3,7 @@ package authservice
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -273,12 +274,14 @@ func fallbackName(name, email string) string {
 
 func mapGoogleAuthProviderError(err error) error {
 	switch {
+	// Wrap instead of replacing so the provider's detail (e.g. Google's
+	// "redirect_uri_mismatch") reaches the API response and the logs.
 	case errors.Is(err, serviceinterface.ErrGoogleAuthInvalidIDToken):
-		return ErrInvalidGoogleToken
+		return fmt.Errorf("%w: %v", ErrInvalidGoogleToken, err)
 	case errors.Is(err, serviceinterface.ErrGoogleAuthInvalidOAuthCode):
-		return ErrInvalidGoogleOAuthCode
+		return fmt.Errorf("%w: %v", ErrInvalidGoogleOAuthCode, err)
 	case errors.Is(err, serviceinterface.ErrGoogleAuthNotConfigured):
-		return ErrGoogleOAuthNotConfigured
+		return fmt.Errorf("%w: %v", ErrGoogleOAuthNotConfigured, err)
 	default:
 		return err
 	}
