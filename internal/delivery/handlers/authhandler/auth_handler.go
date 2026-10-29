@@ -3,6 +3,7 @@ package authhandler
 import (
 	"context"
 	"errors"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -20,6 +21,10 @@ import (
 )
 
 const requestTimeout = 8 * time.Second
+
+// googleLoginTimeout covers the round trips to Google's token endpoint, which
+// can be slow from some regions; 8s caused spurious login failures.
+const googleLoginTimeout = 20 * time.Second
 
 type AuthHandler struct {
 	authService serviceinterface.AuthService
@@ -53,7 +58,7 @@ func (h *AuthHandler) GoogleLogin(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), googleLoginTimeout)
 	defer cancel()
 
 	user, tokens, err := h.authService.LoginWithGoogle(ctx, req.IDToken)
@@ -86,11 +91,12 @@ func (h *AuthHandler) GoogleOAuthLogin(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), googleLoginTimeout)
 	defer cancel()
 
 	user, tokens, err := h.authService.LoginWithGoogleOAuthCode(ctx, req.Code, req.RedirectURI)
 	if err != nil {
+		log.Printf("google oauth login failed (redirect_uri=%q): %v", req.RedirectURI, err)
 		h.handleAuthError(c, err)
 		return
 	}

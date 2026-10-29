@@ -2,8 +2,8 @@ package googleauth
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -27,6 +27,19 @@ type googleTokenInfoResponse struct {
 	EmailVerified bool   `json:"email_verified,string"`
 	Name          string `json:"name"`
 	Picture       string `json:"picture"`
+}
+
+// googleIDTokenClaims are the ID token fields used after a code exchange.
+// email_verified is a JSON bool in an ID token (unlike the tokeninfo endpoint).
+type googleIDTokenClaims struct {
+	Issuer        string `json:"iss"`
+	Audience      string `json:"aud"`
+	Subject       string `json:"sub"`
+	Email         string `json:"email"`
+	EmailVerified bool   `json:"email_verified"`
+	Name          string `json:"name"`
+	Picture       string `json:"picture"`
+	ExpiresAt     int64  `json:"exp"`
 }
 
 type googleTokenExchangeResponse struct {
@@ -151,19 +164,21 @@ func (p *googleAuthProvider) GetTokenInfoByOAuthCode(
 	}
 
 	if res.StatusCode != http.StatusOK {
-		if payload.Error == "invalid_grant" || payload.Error == "invalid_request" {
-			if payload.ErrorDescription != "" {
-				return nil, fmt.Errorf("%w: %s", serviceinterface.ErrGoogleAuthInvalidOAuthCode, payload.ErrorDescription)
-			}
-			return nil, serviceinterface.ErrGoogleAuthInvalidOAuthCode
+		// Keep Google's error code (e.g. redirect_uri_mismatch) in the message;
+		// its description is often just "Bad Request".
+		detail := strings.TrimSpace(strings.Join([]string{payload.Error, payload.ErrorDescription}, ": "))
+		detail = strings.Trim(detail, ": ")
+		if detail == "" {
+			detail = fmt.Sprintf("status %d", res.StatusCode)
 		}
-		if payload.ErrorDescription != "" {
-			return nil, fmt.Errorf("google token exchange failed: %s", payload.ErrorDescription)
+		switch payload.Error {
+		case "invalid_grant", "invalid_request", "redirect_uri_mismatch":
+			return nil, fmt.Errorf("%w: %s", serviceinterface.ErrGoogleAuthInvalidOAuthCode, detail)
+		case "invalid_client", "unauthorized_client":
+			return nil, fmt.Errorf("%w: %s", serviceinterface.ErrGoogleAuthNotConfigured, detail)
+		default:
+			return nil, fmt.Errorf("google token exchange failed: %s", detail)
 		}
-		if payload.Error != "" {
-			return nil, fmt.Errorf("google token exchange failed: %s", payload.Error)
-		}
-		return nil, fmt.Errorf("google token exchange failed with status %d", res.StatusCode)
 	}
 
 	idToken := strings.TrimSpace(payload.IDToken)
@@ -171,13 +186,52 @@ func (p *googleAuthProvider) GetTokenInfoByOAuthCode(
 		return nil, fmt.Errorf("%w: missing id_token", serviceinterface.ErrGoogleAuthInvalidOAuthCode)
 	}
 
-	tokenInfo, err := p.GetTokenInfoByIDToken(ctx, idToken)
-	if err != nil {
-		if errors.Is(err, serviceinterface.ErrGoogleAuthInvalidIDToken) {
-			return nil, fmt.Errorf("%w: invalid id token returned by provider", serviceinterface.ErrGoogleAuthInvalidOAuthCode)
-		}
-		return nil, err
+	// The ID token came straight from Google's token endpoint over TLS, so per
+	// OpenID Connect Core 3.1.3.7 its claims can be checked locally instead of
+	// making a second round trip to the tokeninfo endpoint.
+	return p.tokenInfoFromIDTokenClaims(idToken, time.Now())
+}
+
+func (p *googleAuthProvider) tokenInfoFromIDTokenClaims(
+	idToken string,
+	now time.Time,
+) (*serviceinterface.GoogleTokenInfo, error) {
+	invalid := func(reason string) error {
+		return fmt.Errorf("%w: %s", serviceinterface.ErrGoogleAuthInvalidOAuthCode, reason)
 	}
 
-	return tokenInfo, nil
+	parts := strings.Split(idToken, ".")
+	if len(parts) != 3 {
+		return nil, invalid("malformed id_token")
+	}
+	rawClaims, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return nil, invalid("malformed id_token payload")
+	}
+
+	var claims googleIDTokenClaims
+	if err := json.Unmarshal(rawClaims, &claims); err != nil {
+		return nil, invalid("malformed id_token claims")
+	}
+
+	if claims.Issuer != "accounts.google.com" && claims.Issuer != "https://accounts.google.com" {
+		return nil, invalid("unexpected id_token issuer")
+	}
+	if strings.TrimSpace(claims.Audience) != p.clientID {
+		return nil, invalid("id_token audience mismatch")
+	}
+	if claims.ExpiresAt == 0 || now.Unix() >= claims.ExpiresAt {
+		return nil, invalid("id_token expired")
+	}
+	if strings.TrimSpace(claims.Subject) == "" {
+		return nil, invalid("id_token subject is empty")
+	}
+
+	return &serviceinterface.GoogleTokenInfo{
+		Subject:       strings.TrimSpace(claims.Subject),
+		Email:         strings.TrimSpace(claims.Email),
+		EmailVerified: claims.EmailVerified,
+		Name:          strings.TrimSpace(claims.Name),
+		Picture:       strings.TrimSpace(claims.Picture),
+	}, nil
 }
