@@ -141,3 +141,30 @@ func httpResponse(status int, body string) *http.Response {
 		Body:       io.NopCloser(bytes.NewBufferString(body)),
 	}
 }
+
+func TestCalculateFallbackPrayerTimes_MatchesPublishedJakartaSchedule(t *testing.T) {
+	// Published Jakarta schedule for 2026-10-29 (6°10' S, 106°49' E):
+	// Subuh 04:10, Terbit 05:25, Dzuhur 11:39, Ashar 14:53, Maghrib 17:48, Isya 18:59.
+	times := calculateFallbackPrayerTimes(-6.1667, 106.8167, "2026-10-29")
+	expected := map[string][2]string{
+		"Fajr":    {times.Fajr, "04:10"},
+		"Sunrise": {times.Sunrise, "05:25"},
+		"Dhuhr":   {times.Dhuhr, "11:39"},
+		"Asr":     {times.Asr, "14:53"},
+		"Maghrib": {times.Maghrib, "17:48"},
+		"Isha":    {times.Isha, "18:59"},
+	}
+	toMinutes := func(value string) int {
+		parsed, err := time.Parse("15:04", value)
+		if err != nil {
+			t.Fatalf("invalid time %q: %v", value, err)
+		}
+		return parsed.Hour()*60 + parsed.Minute()
+	}
+	for name, pair := range expected {
+		diff := toMinutes(pair[0]) - toMinutes(pair[1])
+		if diff < -2 || diff > 2 {
+			t.Errorf("%s = %s, want %s ±2 min", name, pair[0], pair[1])
+		}
+	}
+}
