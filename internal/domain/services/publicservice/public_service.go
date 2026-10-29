@@ -98,7 +98,12 @@ func (s *publicService) fetchPrayerTimes(
 	dateValue string,
 	method string,
 ) (serviceinterface.PrayerTimes, serviceinterface.PrayerTimesMeta, error) {
-	apiURL := fmt.Sprintf("https://api.aladhan.com/v1/timings/%s", dateValue)
+	// Aladhan expects the path date as DD-MM-YYYY.
+	providerDate := dateValue
+	if parsed, err := time.Parse("2006-01-02", dateValue); err == nil {
+		providerDate = parsed.Format("02-01-2006")
+	}
+	apiURL := fmt.Sprintf("https://api.aladhan.com/v1/timings/%s", providerDate)
 	params := url.Values{}
 	params.Set("latitude", strconv.FormatFloat(latitude, 'f', -1, 64))
 	params.Set("longitude", strconv.FormatFloat(longitude, 'f', -1, 64))
@@ -208,16 +213,49 @@ func (s *publicService) reverseGeocode(ctx context.Context, latitude float64, lo
 	}
 }
 
+// calculateFallbackPrayerTimes approximates prayer times astronomically when the
+// external provider is unavailable. Times are expressed in the approximate local
+// timezone derived from longitude (e.g. WIB for western Indonesia), using the
+// Kemenag RI convention: Fajr 20°, Isha 18°, Shafi'i Asr.
 func calculateFallbackPrayerTimes(latitude float64, longitude float64, dateValue string) serviceinterface.PrayerTimes {
-	solarNoon := 12 - (longitude / 15)
+	date, err := time.Parse("2006-01-02", dateValue)
+	if err != nil {
+		date = time.Now().UTC()
+	}
+
+	const degToRad = math.Pi / 180
+	dayOfYear := float64(date.YearDay())
+	gamma := 2 * math.Pi / 365 * (dayOfYear - 1)
+	equationOfTime := 229.18 * (0.000075 + 0.001868*math.Cos(gamma) - 0.032077*math.Sin(gamma) -
+		0.014615*math.Cos(2*gamma) - 0.040849*math.Sin(2*gamma))
+	declination := 0.006918 - 0.399912*math.Cos(gamma) + 0.070257*math.Sin(gamma) -
+		0.006758*math.Cos(2*gamma) + 0.000907*math.Sin(2*gamma) -
+		0.002697*math.Cos(3*gamma) + 0.00148*math.Sin(3*gamma)
+
+	timezoneOffset := math.Round(longitude / 15)
+	solarNoon := 12 + timezoneOffset - longitude/15 - equationOfTime/60
+	latRad := latitude * degToRad
+
+	// hourAngle returns the hours between solar noon and the moment the sun
+	// reaches the given altitude (degrees, negative below the horizon).
+	hourAngle := func(altitude float64) float64 {
+		cosH := (math.Sin(altitude*degToRad) - math.Sin(latRad)*math.Sin(declination)) /
+			(math.Cos(latRad) * math.Cos(declination))
+		cosH = math.Max(-1, math.Min(1, cosH))
+		return math.Acos(cosH) / degToRad / 15
+	}
+
+	asrAltitude := math.Atan(1/(1+math.Tan(math.Abs(latRad-declination)))) / degToRad
+	// Kemenag adds a few minutes of ihtiyat (safety margin) to each time.
+	const ihtiyat = 2.0 / 60
 
 	return serviceinterface.PrayerTimes{
-		Fajr:    formatTime(solarNoon - 1.5),
-		Sunrise: formatTime(solarNoon - 1),
-		Dhuhr:   formatTime(solarNoon),
-		Asr:     formatTime(solarNoon + 3),
-		Maghrib: formatTime(solarNoon + 6),
-		Isha:    formatTime(solarNoon + 7.5),
+		Fajr:    formatTime(solarNoon - hourAngle(-20) + ihtiyat),
+		Sunrise: formatTime(solarNoon - hourAngle(-0.833) - ihtiyat),
+		Dhuhr:   formatTime(solarNoon + ihtiyat),
+		Asr:     formatTime(solarNoon + hourAngle(asrAltitude) + ihtiyat),
+		Maghrib: formatTime(solarNoon + hourAngle(-0.833) + ihtiyat),
+		Isha:    formatTime(solarNoon + hourAngle(-18) + ihtiyat),
 		Date:    dateValue,
 		Location: serviceinterface.PrayerLocation{
 			Latitude:  latitude,
@@ -227,9 +265,9 @@ func calculateFallbackPrayerTimes(latitude float64, longitude float64, dateValue
 }
 
 func formatTime(decimalHours float64) string {
-	hours := int(math.Floor(decimalHours))
-	minutes := int(math.Floor((decimalHours - float64(hours)) * 60))
-	return fmt.Sprintf("%02d:%02d", hours, minutes)
+	totalMinutes := int(math.Round(decimalHours * 60))
+	totalMinutes = ((totalMinutes % 1440) + 1440) % 1440
+	return fmt.Sprintf("%02d:%02d", totalMinutes/60, totalMinutes%60)
 }
 
 func firstNonEmpty(values ...string) string {
