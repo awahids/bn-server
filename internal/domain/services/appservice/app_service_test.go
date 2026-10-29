@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/awahids/bn-server/internal/domain/models"
 	"github.com/awahids/bn-server/internal/domain/services/serviceinterface"
@@ -88,6 +89,10 @@ func (m *mockAppRepo) GetActivePushTimezones(context.Context) ([]string, error) 
 }
 
 func (m *mockAppRepo) GetDuePushReminderTargets(context.Context, string, string, string) ([]models.PushReminderTarget, error) {
+	return nil, nil
+}
+
+func (m *mockAppRepo) GetDueDailyReminderTargets(context.Context, string, time.Time) ([]models.PushReminderTarget, error) {
 	return nil, nil
 }
 

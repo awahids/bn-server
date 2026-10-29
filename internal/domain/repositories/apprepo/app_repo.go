@@ -281,6 +281,24 @@ func (r *appRepository) GetDuePushReminderTargets(ctx context.Context, timezone,
 	return targets, nil
 }
 
+// GetDueDailyReminderTargets returns the push subscriptions in timezone whose
+// user turned on the daily study reminder and has not studied since dayStart.
+func (r *appRepository) GetDueDailyReminderTargets(ctx context.Context, timezone string, dayStart time.Time) ([]models.PushReminderTarget, error) {
+	var targets []models.PushReminderTarget
+	err := r.db.WithContext(ctx).
+		Table("push_subscriptions AS ps").
+		Select("ps.id AS subscription_id, ps.endpoint, ps.p256dh, ps.auth, ps.timezone, ps.user_id").
+		Joins("JOIN users u ON u.id = ps.user_id AND u.deleted_at IS NULL").
+		Where("ps.enabled = ? AND ps.timezone = ? AND ps.deleted_at IS NULL", true, timezone).
+		Where("u.preferences->>'dailyReminder' = ?", "true").
+		Where("NOT EXISTS (SELECT 1 FROM user_progress up WHERE up.user_id = ps.user_id AND up.last_accessed >= ? AND up.deleted_at IS NULL)", dayStart).
+		Scan(&targets).Error
+	if err != nil {
+		return nil, err
+	}
+	return targets, nil
+}
+
 func (r *appRepository) GetSchools(ctx context.Context) ([]models.School, error) {
 	var schools []models.School
 	err := r.db.WithContext(ctx).
